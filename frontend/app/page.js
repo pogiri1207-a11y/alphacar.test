@@ -17,9 +17,24 @@ const bannerItems = [
 
 // TOP 10 이미지 (샘플)
 const topCarImages = [
-  { id: 1, name: "아이오닉 6" },
-  { id: 2, name: "K5" },
-  { id: 3, name: "쏘나타" },
+  {
+    id: 1,
+    name: "더 뉴 아이오닉 6 - E-LITE(롱레인지) 18인치",
+    priceText: "50,640,843 원",
+    img: "/topcars/new_ioniq6.png",
+  },
+  {
+    id: 2,
+    name: "넥쏘 수소 전기차",
+    priceText: "70,000,000 원",
+    img: "/topcars/new_nexo.png",
+  },
+  {
+    id: 3,
+    name: "아이오닉 6 (기본형)",
+    priceText: "53,340,000 원",
+    img: "/topcars/ioniq6.png",
+  },
 ];
 
 // 브랜드 탭
@@ -72,7 +87,6 @@ export default function HomePage() {
 
   // DB에서 차량 목록 가져오기
   useEffect(() => {
-    // ⚠️ 주의: 실제 배포 시에는 'http://192.168.0.160:3007' 대신 환경변수(API_BASE)를 사용하는 것이 좋습니다.
     fetch("http://192.168.0.160:3007/cars")
       .then((res) => {
         if (!res.ok) throw new Error("백엔드 연결 실패");
@@ -88,7 +102,6 @@ export default function HomePage() {
       })
       .catch((err) => {
         console.error("Failed to fetch:", err);
-        // 오류가 났던 부분 수정: 따옴표(") 대신 백틱(`)을 사용하여 줄바꿈 안전장치 추가
         setErrorMsg(
           `서버와 연결할 수 없습니다. (백엔드가 켜져있는지 확인해주세요)`
         );
@@ -225,17 +238,99 @@ export default function HomePage() {
       {/* TOP 10 */}
       <section className="topcar-section">
         <h3>ALPHACAR 추천 TOP 10</h3>
-        <div className="topcar-slider">
-          <div className="topcar-image-wrap">
-            <div className="topcar-image-placeholder">
-              {topCarImages[topCarIndex].name} 이미지
+
+        {topCarImages.length > 0 && (
+          <div
+            className="topcar-slider"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              background: "#ffffff",
+              borderRadius: "20px",
+              padding: "30px 40px",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+              minHeight: "260px", // 전체 박스 높이 어느 정도 고정
+            }}
+          >
+            {/* 왼쪽 큰 이미지 박스 */}
+            <div
+              className="topcar-image-wrap"
+              style={{
+                flex: 1.4,
+                background: "#f2f2f2",
+                borderRadius: "16px",
+                padding: "20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxSizing: "border-box",
+                height: "260px", // 이미지 영역 높이 고정
+              }}
+            >
+              <img
+                src={topCarImages[topCarIndex].img}
+                alt={topCarImages[topCarIndex].name}
+                className="topcar-image"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  width: "auto",
+                  height: "auto",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+
+            {/* 오른쪽 텍스트 */}
+            <div
+              className="topcar-info"
+              style={{
+                flex: 1,
+                paddingLeft: "40px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <p
+                className="topcar-name"
+                style={{
+                  fontSize: "20px",
+                  fontWeight: 700,
+                  marginBottom: "12px",
+                }}
+              >
+                {topCarImages[topCarIndex].name}
+              </p>
+              <p
+                className="topcar-sub"
+                style={{
+                  fontSize: "14px",
+                  color: "#888",
+                  marginBottom: "16px",
+                }}
+              >
+                ALPHACAR 데이터 기반 인기 차량
+              </p>
+              <p
+                className="topcar-price-title"
+                style={{
+                  fontSize: "14px",
+                  color: "#999",
+                  marginBottom: "4px",
+                }}
+              >
+                세제 혜택 적용 후 차량 가격
+              </p>
+              <p
+                className="topcar-price"
+                style={{ fontSize: "20px", fontWeight: 700 }}
+              >
+                {topCarImages[topCarIndex].priceText}
+              </p>
             </div>
           </div>
-          <div className="topcar-info">
-            <p className="topcar-name">{topCarImages[topCarIndex].name}</p>
-            <p className="topcar-sub">ALPHACAR 데이터 기반 인기 차량</p>
-          </div>
-        </div>
+        )}
       </section>
 
       {/* 브랜드 탭 + 차량 리스트 */}
@@ -271,7 +366,6 @@ export default function HomePage() {
             </p>
           )}
 
-          {/* ✅ 여기서부터는 필터된 것 중 현재 페이지(최대 12개)만 표시 */}
           {paginatedCars.map((car) => (
             <div key={car._id || Math.random()} className="car-card">
               <div
@@ -294,7 +388,8 @@ export default function HomePage() {
               </div>
               <div className="car-info">
                 <p className="car-name">
-                  [{car.manufacturer || "미분류"}] {car.vehicle_name || "이름 없음"}
+                  [{car.manufacturer || "미분류"}]{" "}
+                  {car.vehicle_name || "이름 없음"}
                 </p>
                 <p className="car-price">
                   {formatPrice(car.summary?.price_range?.min)} ~
@@ -330,3 +425,4 @@ export default function HomePage() {
     </div>
   );
 }
+

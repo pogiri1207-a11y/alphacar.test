@@ -47,35 +47,6 @@ function SearchContent() {
 
   return (
     <div className="page-wrapper">
-      {/* 🔵 상단 헤더 */}
-      <header className="header">
-        <div className="header-left">
-          <Link href="/" className="logo">
-            ALPHACAR
-          </Link>
-        </div>
-        <div className="header-right">
-          <Link href="/login" className="mypage-btn">
-            마이페이지
-          </Link>
-        </div>
-      </header>
-
-      {/* 🔵 상단 메뉴 버튼 4개 */}
-      <nav className="top-nav">
-        <Link href="/search" className="nav-item">
-          검색
-        </Link>
-        <Link href="/drive" className="nav-item">
-          드라이브 코스
-        </Link>
-        <Link href="/quote" className="nav-item">
-          코드 견적
-        </Link>
-        <Link href="/community" className="nav-item">
-          커뮤니티
-        </Link>
-      </nav>
 
       {/* 🔵 기존 검색 결과 영역 (DB 연동 그대로 유지) */}
       <div
