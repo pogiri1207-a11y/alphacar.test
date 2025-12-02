@@ -3,6 +3,8 @@ import "./globals.css";
 import Link from "next/link";
 import AiChatButton from "./AICHAT/AiChatButton";
 import RightSideBar from "./RightSideBar";   // 🔹 추가
+import LeftAdBanner from "./LeftAdBanner";   // 🔹 추가
+
 
 export const metadata = {
   title: "ALPHACAR",
@@ -51,6 +53,8 @@ export default function RootLayout({ children }) {
 
         {/* 오른쪽 사이드 퀵메뉴 + TOP 버튼 */}
         <RightSideBar />
+        {/* 🔹 왼쪽 광고 배너 */}
+        <LeftAdBanner />
       </body>
     </html>
   );

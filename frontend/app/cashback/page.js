@@ -1,11 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react"; // [추가] 상태 관리를 위해 import
 
 export default function CashbackPage() {
+  // [추가] 오늘 날짜를 저장할 상태 변수 (초기값은 빈 문자열)
+  const [todayStr, setTodayStr] = useState("");
+
+  // [추가] 컴포넌트가 로드될 때 오늘 날짜 계산
+  useEffect(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    setTodayStr(`${year}-${month}-${day}`);
+  }, []);
+
   return (
     <div className="page-wrapper">
-
       {/* 본문 */}
       <main
         style={{
@@ -51,8 +63,10 @@ export default function CashbackPage() {
             >
               최대 <span style={{ color: "#ffd84d" }}>1.8%</span> 현금캐시백!
             </h1>
+            
+            {/* [수정] 날짜가 자동으로 표시되는 부분 */}
             <p style={{ margin: 0, fontSize: "14px", opacity: 0.9 }}>
-              2025-12-01 기준
+              {todayStr || "로딩 중..."} 기준
             </p>
           </div>
 
@@ -199,10 +213,6 @@ export default function CashbackPage() {
 
 /**
  * 개별 카드 박스 컴포넌트
- * props:
- *  - color: 상단 줄 & 헤더 배경색
- *  - label: "A 카드" 등
- *  - rows: [{ amount, cardsa, extra, benefit }]
  */
 function CardTable({ color, label, rows }) {
   return (
@@ -296,4 +306,3 @@ const tdStyle = {
   textAlign: "center",
   borderTop: "1px solid #eee",
 };
-

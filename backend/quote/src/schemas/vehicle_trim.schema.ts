@@ -1,10 +1,12 @@
 // backend/quote/src/schemas/vehicle_trim.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+// [추가된 부분] VehicleOption 클래스 import
+import { VehicleOption } from './vehicle_option.schema'; 
 
 export type VehicleTrimDocument = HydratedDocument<VehicleTrim>;
 
-@Schema({ collection: 'vehicletrims' }) // 컬렉션 이름 유지
+@Schema({ collection: 'vehicletrims' }) 
 export class VehicleTrim {
   @Prop()
   name: string; 
@@ -12,17 +14,18 @@ export class VehicleTrim {
   @Prop({ type: Types.ObjectId })
   vehicle_id: Types.ObjectId; 
 
-  // [수정] price -> base_price
   @Prop()
   base_price: number;
 
-  // [추가] description (설명)
   @Prop()
   description: string;
 
-  // [추가] image_url (차량 이미지)
   @Prop()
   image_url: string;
+
+  // [수정] VehicleOption을 참조하도록 설정
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'VehicleOption' }] })
+  options: VehicleOption[]; 
 }
 
 export const VehicleTrimSchema = SchemaFactory.createForClass(VehicleTrim);

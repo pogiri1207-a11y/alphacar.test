@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { Manufacturer, ManufacturerSchema } from './schemas/manufacturer.schema';
 import { Vehicle, VehicleSchema } from './schemas/vehicle.schema';
 import { VehicleTrim, VehicleTrimSchema } from './schemas/vehicle_trim.schema';
+import { VehicleOption, VehicleOptionSchema } from './schemas/vehicle_option.schema';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { VehicleTrim, VehicleTrimSchema } from './schemas/vehicle_trim.schema';
       { name: Manufacturer.name, schema: ManufacturerSchema },
       { name: Vehicle.name, schema: VehicleSchema },
       { name: VehicleTrim.name, schema: VehicleTrimSchema },
+      { name: VehicleOption.name, schema: VehicleOptionSchema },
     ]),
   ],
   controllers: [AppController],

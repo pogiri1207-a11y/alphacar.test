@@ -4,14 +4,21 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+// 반응형 기준 폭
+const SMALL_WIDTH = 1400; // 이보다 작으면 컴팩트 모드
+const HIDE_WIDTH = 900;   // 이보다 작으면 사이드바 숨김
+
 export default function RightSideBar() {
   const [isSmall, setIsSmall] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
 
   // 화면 크기에 따라 반응형 설정
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== "undefined") {
-        setIsSmall(window.innerWidth < 1024); // 1024px 미만이면 작게
+        const width = window.innerWidth;
+        setIsSmall(width < SMALL_WIDTH); // 1400px 미만이면 작게
+        setIsHidden(width < HIDE_WIDTH); // 900px 미만이면 아예 숨김
       }
     };
     handleResize();
@@ -28,6 +35,9 @@ export default function RightSideBar() {
   const handleComingSoon = (msg) => {
     alert(`${msg} 기능은 준비 중입니다.`);
   };
+
+  // 900px 미만에서는 오른쪽 사이드바 자체를 안 보여줌
+  if (isHidden) return null;
 
   // 반응형 사이즈 값
   const sidebarRight = isSmall ? 16 : 32;
