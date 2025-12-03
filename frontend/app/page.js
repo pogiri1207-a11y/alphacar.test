@@ -1,18 +1,29 @@
+// kevin@devserver:~/alphacar/frontend/app/page.js
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { fetchMainData } from "../lib/api";
+import YouTubeSection from "./components/YouTubeSection";
 
 // 배너 데이터
 const bannerItems = [
   {
     id: 1,
     img: "/banners/banner1.png",
-    link: "/cashback",
+    link: "/cashback",   // ✅ 1번 배너: 기존 캐시백 표 페이지
   },
-  { id: 2, img: "/banners/banner2.png" },
-  { id: 3, img: "/banners/banner3.png" },
+  {
+    id: 2,
+    img: "/banners/banner2.png",
+    link: "/benefit",    // ✅ 2번 배너: 새로 만들 혜택 안내 페이지
+  },
+  {
+    id: 3,
+    img: "/banners/banner3.png",
+    link: "/quote",      // ✅ 3번 배너: 기존 비교견적 페이지
+  },
 ];
 
 // TOP 10 이미지 (샘플)
@@ -45,9 +56,27 @@ const brands = [
   "제네시스",
   "르노코리아",
   "KGM",
-  "BMW",
+  "쉐보레",
   "벤츠",
+  "BMW",
   "아우디",
+  "폭스바겐",
+  "볼보",
+  "렉서스",
+  "토요타",
+  "테슬라",
+  "랜드로버",
+  "포르쉐",
+  "미니",
+  "포드",
+  "링컨",
+  "지프",
+  "푸조",
+  "캐딜락",
+  "폴스타",
+  "마세라티",
+  "혼다",
+  "BYD",
 ];
 
 export default function HomePage() {
@@ -56,6 +85,12 @@ export default function HomePage() {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [topCarIndex, setTopCarIndex] = useState(0);
 
+  // SSR hydration-safe index (서버=0, 클라이언트=실제값)
+  const safeBannerIndex =
+    typeof window === "undefined" ? 0 : bannerIndex;
+  const safeTopCarIndex =
+    typeof window === "undefined" ? 0 : topCarIndex;
+
   const [carList, setCarList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
@@ -63,7 +98,6 @@ export default function HomePage() {
   const [selectedBrand, setSelectedBrand] = useState("전체");
   const [searchText, setSearchText] = useState("");
 
-  // ✅ 페이지네이션 state
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
@@ -87,35 +121,31 @@ export default function HomePage() {
 
   // DB에서 차량 목록 가져오기
   useEffect(() => {
-    fetch("http://192.168.0.160:3007/cars")
-      .then((res) => {
-        if (!res.ok) throw new Error("백엔드 연결 실패");
-        return res.json();
-      })
+    fetchMainData()
       .then((data) => {
-        if (Array.isArray(data)) {
-          setCarList(data);
-        } else {
-          setCarList([]);
-        }
+        let cars = [];
+        if (data.carList && Array.isArray(data.carList)) cars = data.carList;
+        else if (data.cars && Array.isArray(data.cars)) cars = data.cars;
+        else if (Array.isArray(data)) cars = data;
+
+        setCarList(cars);
         setLoading(false);
       })
       .catch((err) => {
         console.error("Failed to fetch:", err);
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL;
         setErrorMsg(
-          `서버와 연결할 수 없습니다. (백엔드가 켜져있는지 확인해주세요)`
+          `서버와 연결할 수 없습니다. (백엔드 연결 주소: ${baseUrl}/main)`
         );
         setCarList([]);
         setLoading(false);
       });
   }, []);
 
-  // 브랜드 바꾸면 항상 1페이지로 리셋
   useEffect(() => {
     setCurrentPage(1);
   }, [selectedBrand]);
 
-  // 검색 버튼 / 엔터
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     const keyword = searchText.trim();
@@ -128,16 +158,12 @@ export default function HomePage() {
     return (Number(price) / 10000).toLocaleString() + "만원";
   };
 
-  // 브랜드 필터 적용
   const filteredCars = carList.filter((car) => {
     if (!car) return false;
     const carBrand = car.manufacturer || car.brand || "기타";
-    const matchBrand =
-      selectedBrand === "전체" ? true : carBrand === selectedBrand;
-    return matchBrand;
+    return selectedBrand === "전체" ? true : carBrand === selectedBrand;
   });
 
-  // ✅ 페이지네이션 계산
   const totalPages = Math.max(
     1,
     Math.ceil(filteredCars.length / ITEMS_PER_PAGE)
@@ -148,17 +174,13 @@ export default function HomePage() {
     startIndex + ITEMS_PER_PAGE
   );
 
-  // 배너 클릭 시 이동
   const handleBannerClick = () => {
     const current = bannerItems[bannerIndex];
-    if (current.link) {
-      router.push(current.link);
-    }
+    if (current.link) router.push(current.link);
   };
 
   return (
     <div className="page-wrapper">
-
       {errorMsg && (
         <div
           style={{
@@ -178,28 +200,33 @@ export default function HomePage() {
       <section className="banner-section">
         <div
           className="banner-slide"
-          style={{ backgroundImage: `url(${bannerItems[bannerIndex].img})` }}
+          style={{
+            backgroundImage: `url(${bannerItems[safeBannerIndex].img})`,
+          }}
           onClick={handleBannerClick}
         />
-        {/* 배너 점 ●●● */}
         <div className="banner-dots">
           {bannerItems.map((item, idx) => (
             <button
               key={item.id}
-              className={idx === bannerIndex ? "dot active" : "dot"}
+              className={idx === safeBannerIndex ? "dot active" : "dot"}
               onClick={() => setBannerIndex(idx)}
             />
           ))}
         </div>
       </section>
 
-      {/* 검색창 */}
+      {/* 🔍 검색창 - 배너와 같은 폭으로 확장 */}
       <section
-        style={{ maxWidth: "600px", margin: "30px auto", padding: "0 20px" }}
+        style={{
+          margin: "30px auto",
+          padding: "0 40px",
+        }}
       >
         <form
           onSubmit={handleSearchSubmit}
           style={{
+            width: "100%",
             backgroundColor: "white",
             borderRadius: "999px",
             border: "2px solid #0070f3",
@@ -207,6 +234,7 @@ export default function HomePage() {
             display: "flex",
             alignItems: "center",
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            boxSizing: "border-box",
           }}
         >
           <span style={{ marginRight: "10px", fontSize: "18px" }}>🔍</span>
@@ -215,7 +243,12 @@ export default function HomePage() {
             placeholder="찾는 차량을 검색해 주세요 (예: 그랜저)"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            style={{ border: "none", outline: "none", flex: 1, fontSize: "16px" }}
+            style={{
+              border: "none",
+              outline: "none",
+              flex: 1,
+              fontSize: "16px",
+            }}
           />
           <button
             type="submit"
@@ -249,10 +282,9 @@ export default function HomePage() {
               borderRadius: "20px",
               padding: "30px 40px",
               boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-              minHeight: "260px", // 전체 박스 높이 어느 정도 고정
+              minHeight: "260px",
             }}
           >
-            {/* 왼쪽 큰 이미지 박스 */}
             <div
               className="topcar-image-wrap"
               style={{
@@ -264,12 +296,12 @@ export default function HomePage() {
                 alignItems: "center",
                 justifyContent: "center",
                 boxSizing: "border-box",
-                height: "260px", // 이미지 영역 높이 고정
+                height: "260px",
               }}
             >
               <img
-                src={topCarImages[topCarIndex].img}
-                alt={topCarImages[topCarIndex].name}
+                src={topCarImages[safeTopCarIndex].img}
+                alt={topCarImages[safeTopCarIndex].name}
                 className="topcar-image"
                 style={{
                   maxWidth: "100%",
@@ -281,7 +313,6 @@ export default function HomePage() {
               />
             </div>
 
-            {/* 오른쪽 텍스트 */}
             <div
               className="topcar-info"
               style={{
@@ -300,7 +331,7 @@ export default function HomePage() {
                   marginBottom: "12px",
                 }}
               >
-                {topCarImages[topCarIndex].name}
+                {topCarImages[safeTopCarIndex].name}
               </p>
               <p
                 className="topcar-sub"
@@ -326,11 +357,21 @@ export default function HomePage() {
                 className="topcar-price"
                 style={{ fontSize: "20px", fontWeight: 700 }}
               >
-                {topCarImages[topCarIndex].priceText}
+                {topCarImages[safeTopCarIndex].priceText}
               </p>
             </div>
           </div>
         )}
+      </section>
+
+      {/* 🎬 ALPHACAR 유튜브 추천 섹션 */}
+      <section
+        style={{
+          margin: "40px auto 0",
+          padding: "0 40px",
+        }}
+      >
+        <YouTubeSection />
       </section>
 
       {/* 브랜드 탭 + 차량 리스트 */}
@@ -366,16 +407,19 @@ export default function HomePage() {
             </p>
           )}
 
-          {paginatedCars.map((car) => (
-            <div key={car._id || Math.random()} className="car-card">
+          {paginatedCars.map((car, idx) => (
+            <div
+              key={car._id || car.name || idx}
+              className="car-card"
+            >
               <div
                 className="car-image-placeholder"
                 style={{ overflow: "hidden", background: "#fff" }}
               >
-                {car.photos?.representative_image?.url ? (
+                {car.imageUrl ? (
                   <img
-                    src={car.photos.representative_image.url}
-                    alt={car.vehicle_name || "차량"}
+                    src={car.imageUrl}
+                    alt={car.name || "차량"}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -389,10 +433,10 @@ export default function HomePage() {
               <div className="car-info">
                 <p className="car-name">
                   [{car.manufacturer || "미분류"}]{" "}
-                  {car.vehicle_name || "이름 없음"}
+                  {car.name || "이름 없음"}
                 </p>
                 <p className="car-price">
-                  {formatPrice(car.summary?.price_range?.min)} ~
+                  {formatPrice(car.minPrice)} ~
                 </p>
                 <button className="car-detail-btn">상세보기</button>
               </div>
@@ -400,7 +444,6 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* ✅ 페이지네이션 버튼 */}
         {filteredCars.length > 0 && (
           <div className="pagination">
             {Array.from({ length: totalPages }, (_, idx) => {

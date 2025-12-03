@@ -1,307 +1,316 @@
+// app/community/page.js
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  fetchCommunityPosts,
-  createCommunityPost,
-} from "../../lib/api";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-const CATEGORIES = ["전체", "구매 고민", "오너 리뷰"];
+const TABS = [
+  { key: "all", label: "전체" },
+  { key: "buy", label: "구매 고민" },
+  { key: "review", label: "오너 리뷰" },
+];
+
+const SAMPLE_POSTS = [
+  {
+    id: 156,
+    no: 156,
+    type: "공지",
+    category: "notice",
+    title: "알파카 김포지점 GRAND OPEN 🔔",
+    date: "2025-11-28",
+  },
+  {
+    id: 155,
+    no: 155,
+    type: "공지",
+    category: "notice",
+    title: "알파카 연장보증 서비스 약관 개정 안내 (2025-12-01)",
+    date: "2025-11-25",
+  },
+  {
+    id: 154,
+    no: 154,
+    type: "공지",
+    category: "notice",
+    title: "알파카 연장보증 서비스 약관 개정 안내 (2025-12-01)",
+    date: "2025-11-25",
+  },
+  {
+    id: 153,
+    no: 153,
+    type: "일반",
+    category: "buy",
+    title: "그랜저 하이브리드 vs G80 중에 고민입니다",
+    date: "2025-11-29",
+  },
+  {
+    id: 152,
+    no: 152,
+    type: "일반",
+    category: "review",
+    title: "쏘나타 N라인 1년 탄 솔직 후기",
+    date: "2025-11-20",
+  },
+];
 
 export default function CommunityPage() {
-  const [data, setData] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState("전체");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchText, setSearchText] = useState("");
 
-  // 글쓰기 폼 상태
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [category, setCategory] = useState("구매 고민");
-
-  useEffect(() => {
-    fetchCommunityPosts()
-      .then((res) => {
-        setData(res);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("커뮤니티 글 목록을 불러오지 못했습니다.");
-      })
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filteredPosts =
-    selectedCategory === "전체"
-      ? data?.posts ?? []
-      : (data?.posts ?? []).filter(
-          (p) => p.category === selectedCategory
-        );
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title.trim() || !content.trim()) {
-      alert("제목과 내용을 입력해 주세요.");
-      return;
-    }
-
-    try {
-      const res = await createCommunityPost({
-        title,
-        content,
-        category,
-        author: "익명",
-      });
-      alert(res.message);
-
-      // 프론트에서만 임시로 목록에 추가 (실제로는 다시 fetch 하는 게 좋음)
-      const newPost = {
-        id: Date.now(),
-        category,
-        title,
-        content,
-        author: "익명",
-        date: new Date().toISOString().slice(0, 10),
-        views: 0,
-      };
-
-      setData((prev) => ({
-        ...(prev ?? { message: "", posts: [] }),
-        posts: [newPost, ...(prev?.posts ?? [])],
-      }));
-
-      setTitle("");
-      setContent("");
-    } catch (err) {
-      console.error(err);
-      alert("글 등록 중 오류가 발생했습니다.");
-    }
+  const handleWriteClick = () => {
+    router.push("/community/write");
   };
 
-  if (loading) {
-    return <div style={{ padding: "32px" }}>불러오는 중...</div>;
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: "32px", color: "red" }}>
-        {error}
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <div style={{ padding: "32px" }}>데이터가 없습니다.</div>;
-  }
+  const filtered = SAMPLE_POSTS.filter((post) => {
+    if (activeTab === "buy" && post.category !== "buy") return false;
+    if (activeTab === "review" && post.category !== "review") return false;
+    if (searchText.trim()) {
+      const keyword = searchText.trim();
+      if (!post.title.includes(keyword)) return false;
+    }
+    return true;
+  });
 
   return (
-    <main
+    <div
       style={{
-        maxWidth: "960px",
+        maxWidth: "1200px",
         margin: "0 auto",
-        padding: "32px",
-        backgroundColor: "white",
-        borderRadius: "12px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+        padding: "40px 16px 80px",
       }}
     >
-      <h1
-        style={{
-          fontSize: "24px",
-          fontWeight: "bold",
-          marginBottom: "16px",
-        }}
-      >
-        커뮤니티
-      </h1>
-      <p style={{ fontSize: "14px", color: "#666", marginBottom: "24px" }}>
-        {data.message}
-      </p>
-
-      {/* 카테고리 탭 */}
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          marginBottom: "24px",
-          flexWrap: "wrap",
-        }}
-      >
-        {CATEGORIES.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            style={{
-              padding: "6px 12px",
-              borderRadius: "999px",
-              border:
-                selectedCategory === cat
-                  ? "2px solid #111827"
-                  : "1px solid #ddd",
-              backgroundColor:
-                selectedCategory === cat ? "#f3f4f6" : "#fff",
-              cursor: "pointer",
-              fontSize: "13px",
-            }}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* 글 목록 */}
-      <section style={{ marginBottom: "32px" }}>
-        <h2
+      <main>
+        <div
           style={{
-            fontSize: "18px",
-            fontWeight: "bold",
-            marginBottom: "12px",
+            borderRadius: "18px",
+            backgroundColor: "#fff",
+            boxShadow: "0 4px 18px rgba(0,0,0,0.06)",
+            padding: "28px 32px 32px",
           }}
         >
-          게시글 목록
-        </h2>
-
-        {filteredPosts.length === 0 ? (
-          <p style={{ fontSize: "14px", color: "#777" }}>
-            아직 게시글이 없습니다.
-          </p>
-        ) : (
-          <ul
+          {/* 상단 제목 영역 */}
+          <header
             style={{
-              listStyle: "none",
-              padding: 0,
-              margin: 0,
               display: "flex",
-              flexDirection: "column",
-              gap: "12px",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "20px",
             }}
           >
-            {filteredPosts.map((post) => (
-              <li
-                key={post.id}
+            <div>
+              <h1
                 style={{
-                  border: "1px solid #eee",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
-                  backgroundColor: "#fafafa",
+                  fontSize: "22px",
+                  fontWeight: 700,
+                  marginBottom: "4px",
                 }}
               >
-                <div
-                  style={{
-                    fontSize: "12px",
-                    color: "#888",
-                    marginBottom: "4px",
-                  }}
-                >
-                  [{post.category}] · {post.author} · {post.date} · 조회{" "}
-                  {post.views}
-                </div>
-                <div
-                  style={{
-                    fontSize: "15px",
-                    fontWeight: "bold",
-                    marginBottom: "4px",
-                  }}
-                >
-                  {post.title}
-                </div>
-                <div
-                  style={{
-                    fontSize: "13px",
-                    color: "#555",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {post.content}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                커뮤니티
+              </h1>
+              <p
+                style={{
+                  fontSize: "13px",
+                  color: "#777",
+                }}
+              >
+                알파카의 최신 소식을 알려드려요
+              </p>
+            </div>
 
-      {/* 글쓰기 폼 */}
-      <section>
-        <h2
-          style={{
-            fontSize: "18px",
-            fontWeight: "bold",
-            marginBottom: "12px",
-          }}
-        >
-          글쓰기
-        </h2>
-        <form
-          onSubmit={handleSubmit}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            {/* 글쓰기 버튼 */}
+            <button
+              type="button"
+              onClick={handleWriteClick}
+              style={{
+                padding: "10px 20px",
+                borderRadius: "999px",
+                border: "none",
+                backgroundColor: "#111827",
+                color: "#fff",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              글쓰기
+            </button>
+          </header>
+
+          {/* 탭 메뉴 */}
+          <div
             style={{
-              padding: "8px",
-              borderRadius: "8px",
-              border: "1px solid #ddd",
+              display: "flex",
+              gap: "8px",
+              marginBottom: "20px",
               fontSize: "13px",
-              maxWidth: "200px",
             }}
           >
-            <option value="구매 고민">구매 고민</option>
-            <option value="오너 리뷰">오너 리뷰</option>
-          </select>
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "999px",
+                  border:
+                    activeTab === tab.key
+                      ? "1px solid #111827"
+                      : "1px solid #e5e7eb",
+                  backgroundColor:
+                    activeTab === tab.key ? "#111827" : "#ffffff",
+                  color: activeTab === tab.key ? "#ffffff" : "#4b5563",
+                  cursor: "pointer",
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-          <input
-            type="text"
-            placeholder="제목을 입력해 주세요"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+          {/* 상단: 총 건수 + 검색 */}
+          <div
             style={{
-              padding: "8px 10px",
-              borderRadius: "8px",
-              border: "1px solid #ddd",
-              fontSize: "14px",
-            }}
-          />
-
-          <textarea
-            placeholder="내용을 입력해 주세요"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            style={{
-              padding: "8px 10px",
-              borderRadius: "8px",
-              border: "1px solid #ddd",
-              fontSize: "14px",
-            }}
-          />
-
-          <button
-            type="submit"
-            style={{
-              marginTop: "4px",
-              alignSelf: "flex-start",
-              padding: "8px 16px",
-              borderRadius: "999px",
-              border: "none",
-              backgroundColor: "#111827",
-              color: "#fff",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontWeight: "bold",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+              fontSize: "13px",
             }}
           >
-            글 등록
-          </button>
-        </form>
-      </section>
-    </main>
+            <div>
+              총{" "}
+              <span style={{ fontWeight: 600 }}>{filtered.length}건</span>
+            </div>
+
+            {/* 검색창 */}
+            <div
+              style={{
+                position: "relative",
+                width: "260px",
+                height: "32px",
+              }}
+            >
+              <input
+                type="text"
+                placeholder="검색할 내용을 입력해 보세요"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "4px",
+                  border: "1px solid #d1d5db",
+                  padding: "0 32px 0 10px",
+                  fontSize: "12px",
+                }}
+              />
+              <span
+                style={{
+                  position: "absolute",
+                  right: "8px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  fontSize: "14px",
+                  color: "#9ca3af",
+                }}
+              >
+                🔍
+              </span>
+            </div>
+          </div>
+
+          {/* 테이블 헤더 */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "80px 1fr 140px",
+              padding: "10px 12px",
+              borderTop: "2px solid #111827",
+              borderBottom: "1px solid #e5e7eb",
+              fontSize: "13px",
+              fontWeight: 600,
+              backgroundColor: "#f9fafb",
+            }}
+          >
+            <div>No.</div>
+            <div>제목</div>
+            <div>등록일</div>
+          </div>
+
+          {/* 게시글 목록 */}
+          {filtered.map((post) => (
+            <div
+              key={post.id}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "80px 1fr 140px",
+                padding: "12px",
+                borderBottom: "1px solid #f3f4f6",
+                fontSize: "13px",
+                alignItems: "center",
+                cursor: "pointer",
+              }}
+              onClick={() => alert("상세페이지는 나중에 연결할게요")}
+            >
+              <div style={{ color: "#6b7280" }}>{post.no}</div>
+              <div>
+                {post.type === "공지" && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginRight: "6px",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
+                      border: "1px solid #2563eb",
+                      color: "#2563eb",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    공지
+                  </span>
+                )}
+                <span>{post.title}</span>
+              </div>
+              <div style={{ color: "#6b7280" }}>{post.date}</div>
+            </div>
+          ))}
+
+          {/* 페이지네이션 (mock) */}
+          <div
+            style={{
+              marginTop: "16px",
+              display: "flex",
+              justifyContent: "center",
+              gap: "6px",
+              fontSize: "13px",
+            }}
+          >
+            {[1, 2, 3, 4, 5].map((page) => (
+              <button
+                key={page}
+                type="button"
+                style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "4px",
+                  border:
+                    page === 1 ? "1px solid #111827" : "1px solid #e5e7eb",
+                  backgroundColor: page === 1 ? "#111827" : "#ffffff",
+                  color: page === 1 ? "#ffffff" : "#4b5563",
+                  cursor: "pointer",
+                }}
+                onClick={() => alert("페이지네이션은 나중에 백엔드 연동")}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
 

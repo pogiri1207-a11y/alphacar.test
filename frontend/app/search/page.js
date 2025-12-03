@@ -23,11 +23,12 @@ function SearchContent() {
     }
     setLoading(true);
 
-    // [DB 연결] 실제 몽고DB 데이터를 가져오는 API 호출 (기존 코드 유지)
+    // [수정] 백엔드 포트 및 엔드포인트 수정 (3007 포트, /search 경로)
+    // 환경변수가 있으면 사용하고, 없으면 하드코딩된 주소 사용
+    const baseUrl = process.env.NEXT_PUBLIC_SEARCH_API_URL || "http://192.168.0.160:3007";
+
     fetch(
-      `http://192.168.0.160:3007/cars/search?keyword=${encodeURIComponent(
-        keyword
-      )}`
+      `${baseUrl}/search?keyword=${encodeURIComponent(keyword)}`
     )
       .then((res) => {
         if (!res.ok) throw new Error("검색 요청 실패");
@@ -35,7 +36,47 @@ function SearchContent() {
       })
       .then((data) => {
         console.log("DB 데이터 확인:", data);
-        setCars(data);
+
+        // [핵심 수정] 백엔드의 간소화된 데이터를 UI가 기대하는 기존 DB 구조로 변환 (Adapter)
+        // 백엔드 응답: { id, name, image, priceRange }
+        // UI 기대값: { _id, vehicle_name, manufacturer, photos..., specifications... }
+        if (data.result && Array.isArray(data.result.cars)) {
+          const adaptedCars = data.result.cars.map((item) => {
+            // 가격 문자열("3,712만원")을 숫자(37120000)로 변환하여 formatPrice 함수가 작동하도록 함
+            let priceNum = 0;
+            if (item.priceRange) {
+              const numStr = item.priceRange.replace(/[^0-9]/g, ""); // 숫자만 추출
+              priceNum = numStr ? parseInt(numStr, 10) * 10000 : 0;
+            }
+
+            return {
+              _id: item.id,
+              vehicle_name: item.name, // 예: "[현대] 그랜저"
+              manufacturer: "검색결과", // 제조사 정보가 이름에 포함되어 있으므로 임시 처리
+              model_year: "-", // 연식 정보 없음
+              fuel_type: "정보없음", // 연료 정보 없음
+              photos: {
+                representative_image: {
+                  url: item.image, // 이미지 연결
+                },
+              },
+              summary: {
+                category: "검색",
+                price_range: {
+                  min: priceNum, // 변환된 가격 숫자
+                },
+              },
+              // 상세 제원 정보가 없으므로 빈 객체로 처리하여 에러 방지 ("-"로 표시됨)
+              specifications: {
+                fuel_efficiency: { combined: "-" },
+                engine: { type: "-", displacement: "-", max_power: "-" },
+              },
+            };
+          });
+          setCars(adaptedCars);
+        } else {
+          setCars([]);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -47,7 +88,6 @@ function SearchContent() {
 
   return (
     <div className="page-wrapper">
-
       {/* 🔵 기존 검색 결과 영역 (DB 연동 그대로 유지) */}
       <div
         style={{
@@ -366,4 +406,3 @@ export default function SearchPage() {
     </Suspense>
   );
 }
-

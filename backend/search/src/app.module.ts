@@ -1,19 +1,27 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { Car, CarSchema } from './car.schema';
+import { Vehicle, VehicleSchema } from './vehicle.schema';
+import { Manufacturer, ManufacturerSchema } from './manufacturer.schema';
 
 @Module({
   imports: [
-    // [수정됨] 사용자님이 제공한 192.168.0.201 서버의 naver_car_data_db로 연결
-    // 계정: naver_car_data_user / 비번: naver_car_data_password
-    MongooseModule.forRoot(
-      'mongodb://naver_car_data_user:naver_car_data_password@192.168.0.201:27017/naver_car_data_db?authSource=admin'
-    ),
-    
-    // Car 스키마 등록
-    MongooseModule.forFeature([{ name: Car.name, schema: CarSchema }]),
+    ConfigModule.forRoot({ isGlobal: true }),
+    // triple_db 연결
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (config: ConfigService) => ({
+        uri: `mongodb://${config.get('DATABASE_USER')}:${config.get('DATABASE_PASSWORD')}@${config.get('DATABASE_HOST')}:${config.get('DATABASE_PORT')}/triple_db?authSource=admin`,
+      }),
+      inject: [ConfigService],
+    }),
+    // Vehicle, Manufacturer 모델 등록
+    MongooseModule.forFeature([
+      { name: Vehicle.name, schema: VehicleSchema },
+      { name: Manufacturer.name, schema: ManufacturerSchema },
+    ]),
   ],
   controllers: [AppController],
   providers: [AppService],

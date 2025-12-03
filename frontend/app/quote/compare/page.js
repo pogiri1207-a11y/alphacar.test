@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-// 백엔드 API 주소
+// 백엔드 API 주소 (3003번 포트 확인)
 const API_BASE = "http://192.168.0.160:3003/quote";
 
-// ---------------- 공통 컴포넌트: 차량 선택 박스 ----------------
-function CarSelector({ title, onSearch, onReset, resetSignal }) {
+// ---------------- [1] 공통 컴포넌트: 차량 선택 박스 (옵션 선택 기능 제거됨) ----------------
+function CarSelector({ title, onSelectComplete, onReset, resetSignal }) {
   const [makerId, setMakerId] = useState("");
   const [modelId, setModelId] = useState("");
   const [trimId, setTrimId] = useState("");
@@ -20,7 +20,7 @@ function CarSelector({ title, onSearch, onReset, resetSignal }) {
   const [modelName, setModelName] = useState("");
   const [trimName, setTrimName] = useState("");
 
-  // 1. 초기 로딩
+  // 1. 초기 로딩 (제조사 목록)
   useEffect(() => {
     fetch(`${API_BASE}/makers`)
       .then((res) => res.json())
@@ -28,20 +28,15 @@ function CarSelector({ title, onSearch, onReset, resetSignal }) {
       .catch((err) => console.error("제조사 로딩 실패:", err));
   }, []);
 
-  // 2. 전체 초기화
+  // 2. 초기화 신호 감지
   useEffect(() => {
     handleReset();
   }, [resetSignal]);
 
   const handleReset = () => {
-    setMakerId("");
-    setModelId("");
-    setTrimId("");
-    setMakerName("");
-    setModelName("");
-    setTrimName("");
-    setModels([]);
-    setTrims([]);
+    setMakerId(""); setModelId(""); setTrimId("");
+    setMakerName(""); setModelName(""); setTrimName("");
+    setModels([]); setTrims([]);
     if (onReset) onReset();
   };
 
@@ -49,14 +44,9 @@ function CarSelector({ title, onSearch, onReset, resetSignal }) {
   const handleMakerChange = (e) => {
     const id = e.target.value;
     const index = e.target.selectedIndex;
-    const name = e.target.options[index].text;
-
     setMakerId(id);
-    setMakerName(name);
-    setModelId("");
-    setModelName("");
-    setTrimId("");
-    setTrimName("");
+    setMakerName(e.target.options[index].text);
+    setModelId(""); setModelName(""); setTrimId(""); setTrimName("");
     setTrims([]);
 
     if (id) {
@@ -71,12 +61,9 @@ function CarSelector({ title, onSearch, onReset, resetSignal }) {
   const handleModelChange = (e) => {
     const id = e.target.value;
     const index = e.target.selectedIndex;
-    const name = e.target.options[index].text;
-
     setModelId(id);
-    setModelName(name);
-    setTrimId("");
-    setTrimName("");
+    setModelName(e.target.options[index].text);
+    setTrimId(""); setTrimName("");
 
     if (id) {
       fetch(`${API_BASE}/trims?modelId=${id}`)
@@ -90,164 +77,75 @@ function CarSelector({ title, onSearch, onReset, resetSignal }) {
   const handleTrimChange = (e) => {
     const id = e.target.value;
     const index = e.target.selectedIndex;
-    const name = e.target.options[index].text;
-
     setTrimId(id);
-    setTrimName(name);
+    setTrimName(e.target.options[index].text);
   };
 
-  const handleSearchClick = () => {
+  // [수정] 옵션 선택 없이 트림 ID만 전달
+  const handleCompleteClick = () => {
     if (!trimId) {
       alert("트림까지 모두 선택해주세요.");
       return;
     }
-    if (onSearch) {
-      onSearch(trimId);
+    // 부모에게 트림 ID만 전달 (옵션은 하단에서 선택)
+    if (onSelectComplete) {
+      onSelectComplete(trimId);
     }
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: "16px",
-        padding: "24px 28px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-        minHeight: "420px",
-      }}
-    >
-      <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
-        {title}
-      </div>
-      <div style={{ fontSize: "13px", color: "#888", marginBottom: "20px" }}>
-        제조사 → 모델 → 트림 순서로 차량을 선택해주세요.
-      </div>
+    <div style={{ backgroundColor: "#fff", borderRadius: "16px", padding: "24px 28px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", minHeight: "300px", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>{title}</div>
+      <div style={{ fontSize: "13px", color: "#888", marginBottom: "20px" }}>제조사 → 모델 → 트림 순서로 차량을 선택해주세요.</div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.1fr 1.1fr", gap: "16px" }}>
-        
-        {/* 제조사 */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "20px" }}>
         <div>
-          <div style={{ fontSize: "13px", color: "#777", marginBottom: "6px" }}>제조사</div>
-          <select
-            size={10}
-            value={makerId}
-            onChange={handleMakerChange}
-            style={selectStyle}
-          >
-            {/* [수정] 데이터가 있어도 맨 위에 항상 안내 문구를 남겨둠 (선택 불가 상태로) */}
+          <div style={labelStyle}>제조사</div>
+          <select size={8} value={makerId} onChange={handleMakerChange} style={selectStyle}>
             <option value="" disabled>제조사 선택</option>
-            {makers.map((m) => (
-              <option key={m._id} value={m._id}>{m.name}</option>
-            ))}
+            {makers.map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
           </select>
         </div>
-
-        {/* 모델 */}
         <div>
-          <div style={{ fontSize: "13px", color: "#777", marginBottom: "6px" }}>모델</div>
-          <select
-            size={10}
-            value={modelId}
-            onChange={handleModelChange}
-            style={selectStyle}
-          >
-            {/* [수정] 목록이 로드되어도 맨 위에 빈 옵션 유지 -> 첫 번째 항목 클릭 시 onChange 발생 보장 */}
-            <option value="" disabled>
-              {models.length === 0 ? "제조사를 선택하세요" : "모델을 선택하세요"}
-            </option>
-            {models.map((m) => (
-              <option key={m._id} value={m._id}>{m.model_name}</option>
-            ))}
+          <div style={labelStyle}>모델</div>
+          <select size={8} value={modelId} onChange={handleModelChange} style={selectStyle}>
+            <option value="" disabled>{models.length === 0 ? "제조사를 선택하세요" : "모델을 선택하세요"}</option>
+            {models.map((m) => <option key={m._id} value={m._id}>{m.model_name}</option>)}
           </select>
         </div>
-
-        {/* 트림 */}
         <div>
-          <div style={{ fontSize: "13px", color: "#777", marginBottom: "6px" }}>트림</div>
-          <select
-            size={10}
-            value={trimId}
-            onChange={handleTrimChange}
-            style={selectStyle}
-          >
-            {/* [수정] 여기도 동일하게 적용 */}
-            <option value="" disabled>
-              {trims.length === 0 ? "모델을 선택하세요" : "트림을 선택하세요"}
-            </option>
-            {trims.map((t) => (
-              <option key={t._id} value={t._id}>{t.name}</option>
-            ))}
+          <div style={labelStyle}>트림</div>
+          <select size={8} value={trimId} onChange={handleTrimChange} style={selectStyle}>
+            <option value="" disabled>{trims.length === 0 ? "모델을 선택하세요" : "트림을 선택하세요"}</option>
+            {trims.map((t) => <option key={t._id} value={t._id}>{t.name}</option>)}
           </select>
         </div>
       </div>
 
-      {/* 선택 결과 & 버튼 */}
-      <div style={{ marginTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-        <div style={{ fontSize: "13px", color: "#555" }}>
-          선택차량:&nbsp;
-          <span style={{ fontWeight: 600 }}>
-            {makerName || "-"} &gt; {modelName || "-"} &gt; {trimName || "-"}
-          </span>
+      <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+        <div style={{ fontSize: "12px", color: "#555" }}>
+          선택: <span style={{ fontWeight: 600 }}>{trimName || "-"}</span>
         </div>
-
         <div style={{ display: "flex", gap: "8px" }}>
-          <button
-            type="button"
-            onClick={handleReset}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "999px",
-              border: "1px solid #ddd",
-              backgroundColor: "#fff",
-              fontSize: "13px",
-              cursor: "pointer",
-            }}
-          >
-            초기화
-          </button>
-          <button
-            type="button"
-            onClick={handleSearchClick}
-            style={{
-              padding: "8px 18px",
-              borderRadius: "999px",
-              border: "none",
-              backgroundColor: "#000",
-              color: "#fff",
-              fontSize: "13px",
-              cursor: "pointer",
-            }}
-          >
-            조회하기
-          </button>
+          <button onClick={handleReset} style={btnResetStyle}>초기화</button>
+          <button onClick={handleCompleteClick} style={btnSearchStyle}>선택 완료</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ---------------- 공통 컴포넌트: 아래 결과 카드 ----------------
-function CarResultCard({ data }) {
-  const [selectedOptions, setSelectedOptions] = useState(new Set());
-
-  useEffect(() => {
-    setSelectedOptions(new Set());
-  }, [data._id]);
-
-  const toggleOption = (id) => {
-    const newSet = new Set(selectedOptions);
-    if (newSet.has(id)) {
-      newSet.delete(id);
-    } else {
-      newSet.add(id);
-    }
-    setSelectedOptions(newSet);
-  };
+// ---------------- [2] 하단 컴포넌트: 차량 정보 및 옵션 선택 카드 ----------------
+function CarOptionSelectCard({ data, selectedSet, onToggle }) {
+  // data: 차량 상세 정보 (options 배열 포함)
+  // selectedSet: 선택된 옵션 ID Set
+  // onToggle: (optId) => void
 
   const basePrice = data.base_price || 0;
+  // 선택된 옵션 가격 합산
   const optionsTotal = (data.options || []).reduce((sum, opt, idx) => {
     const id = opt._id || idx; 
-    if (selectedOptions.has(id)) {
+    if (selectedSet.has(id)) {
       return sum + (opt.price || 0);
     }
     return sum;
@@ -255,166 +153,82 @@ function CarResultCard({ data }) {
   const finalPrice = basePrice + optionsTotal;
 
   return (
-    <div
-      style={{
-        backgroundColor: "#fff",
-        borderRadius: "16px",
-        padding: "28px 32px 24px",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-      }}
-    >
+    <div style={{ backgroundColor: "#fff", borderRadius: "16px", padding: "28px 32px 24px", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+      {/* 차량 이미지 및 정보 */}
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
-        <div
-          style={{
-            width: "200px",
-            height: "110px",
-            margin: "0 auto 16px",
-            borderRadius: "16px",
-            backgroundColor: data.image_url ? "transparent" : "#f3f3f3",
-            overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <div style={{ width: "200px", height: "110px", margin: "0 auto 16px", borderRadius: "16px", backgroundColor: data.image_url ? "transparent" : "#f3f3f3", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {data.image_url ? (
             <img src={data.image_url} alt={data.name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           ) : (
-            <span style={{color: "#ccc", fontSize: "12px"}}>이미지 없음</span>
+            <span style={{ color: "#ccc", fontSize: "12px" }}>이미지 없음</span>
           )}
         </div>
-        <div style={{ fontSize: "20px", fontWeight: 800, marginBottom: "4px" }}>
-          {data.name}
-        </div>
-        <div style={{ fontSize: "13px", color: "#777" }}>
-          {data.description || "상세 설명 없음"}
-        </div>
+        <div style={{ fontSize: "20px", fontWeight: 800, marginBottom: "4px" }}>{data.name}</div>
+        <div style={{ fontSize: "13px", color: "#777" }}>{data.description || "상세 설명 없음"}</div>
       </div>
 
-      <div
-        style={{
-          backgroundColor: "#fafafa",
-          borderRadius: "12px",
-          padding: "14px 18px",
-          fontSize: "14px",
-          marginBottom: "20px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      <div style={{ backgroundColor: "#fafafa", borderRadius: "12px", padding: "14px 18px", fontSize: "14px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span>기본 가격</span>
-        <span style={{ fontWeight: 700, color: "#1d4ed8" }}>
-          {basePrice.toLocaleString()}원
-        </span>
+        <span style={{ fontWeight: 700, color: "#1d4ed8" }}>{basePrice.toLocaleString()}원</span>
       </div>
 
+      {/* [핵심] 하단 카드 내 옵션 선택 체크박스 */}
       <div style={{ fontSize: "14px", marginBottom: "16px" }}>
-        <div style={{ fontWeight: 700, marginBottom: "10px" }}>옵션</div>
-        <div
-          style={{
-            borderRadius: "12px",
-            border: "1px solid #eee",
-            padding: "10px 0",
-            maxHeight: "260px",
-            overflowY: "auto",
-          }}
-        >
+        <div style={{ fontWeight: 700, marginBottom: "10px" }}>옵션 선택 (체크)</div>
+        <div style={{ borderRadius: "12px", border: "1px solid #eee", padding: "10px 0", maxHeight: "260px", overflowY: "auto" }}>
           {(!data.options || data.options.length === 0) && (
-            <div style={{ padding: "12px", textAlign: "center", color: "#999", fontSize: "13px" }}>
-              선택 가능한 옵션이 없습니다.
-            </div>
+            <div style={{ padding: "12px", textAlign: "center", color: "#999", fontSize: "13px" }}>선택 가능한 옵션이 없습니다.</div>
           )}
           {data.options && data.options.map((opt, idx) => {
             const safeId = opt._id || idx; 
+            const isChecked = selectedSet.has(safeId);
             return (
               <label
                 key={safeId}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "8px 18px",
-                  borderBottom: "1px solid #f5f5f5",
-                  cursor: "pointer",
-                  transition: "background 0.2s",
+                  display: "flex", alignItems: "center", padding: "8px 18px", borderBottom: "1px solid #f5f5f5", cursor: "pointer", transition: "background 0.2s",
+                  backgroundColor: isChecked ? "#e9f9f1" : "transparent"
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = "#f9f9f9"}
-                onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                onMouseEnter={(e) => !isChecked && (e.currentTarget.style.background = "#f9f9f9")}
+                onMouseLeave={(e) => !isChecked && (e.currentTarget.style.background = "transparent")}
               >
-                <input 
-                  type="checkbox" 
-                  checked={selectedOptions.has(safeId)}
-                  onChange={() => toggleOption(safeId)}
-                  style={{ marginRight: "12px", cursor: "pointer" }} 
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => onToggle(safeId)}
+                  style={{ marginRight: "12px", cursor: "pointer" }}
                 />
                 <span style={{ flex: 1 }}>{opt.name}</span>
-                <span style={{ fontSize: "13px", color: "#555" }}>
-                  +{opt.price ? opt.price.toLocaleString() : 0}원
-                </span>
+                <span style={{ fontSize: "13px", color: "#555" }}>+{opt.price ? opt.price.toLocaleString() : 0}원</span>
               </label>
             );
           })}
         </div>
       </div>
 
-      <div
-        style={{
-          backgroundColor: "#fff3ee",
-          borderRadius: "12px",
-          padding: "14px 18px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: "15px",
-          fontWeight: 700,
-          marginBottom: "18px",
-        }}
-      >
+      <div style={{ backgroundColor: "#fff3ee", borderRadius: "12px", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "15px", fontWeight: 700 }}>
         <span>최종 차량가</span>
         <span style={{ color: "#e11d48" }}>{finalPrice.toLocaleString()}원</span>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-        <button
-          type="button"
-          style={{
-            padding: "10px 18px",
-            borderRadius: "999px",
-            border: "1px solid #ddd",
-            backgroundColor: "#fff",
-            fontSize: "13px",
-            cursor: "pointer",
-          }}
-        >
-          전체 저장
-        </button>
-        <button
-          type="button"
-          style={{
-            padding: "10px 24px",
-            borderRadius: "999px",
-            border: "none",
-            backgroundColor: "#0052ff",
-            color: "#fff",
-            fontSize: "13px",
-            cursor: "pointer",
-            fontWeight: 600,
-          }}
-        >
-          견적 문의
-        </button>
       </div>
     </div>
   );
 }
 
-// ---------------- 메인 페이지 ----------------
+// ---------------- [3] 메인 페이지 ----------------
 export default function CompareQuotePage() {
   const router = useRouter();
-  const [car1Result, setCar1Result] = useState(null);
-  const [car2Result, setCar2Result] = useState(null);
-  const [resetAllSignal, setResetAllSignal] = useState(0);
+  
+  // 차량 상세 정보 상태
+  const [car1Data, setCar1Data] = useState(null);
+  const [car2Data, setCar2Data] = useState(null);
+  
+  // 선택된 옵션 ID Set 상태
+  const [car1Opts, setCar1Opts] = useState(new Set());
+  const [car2Opts, setCar2Opts] = useState(new Set());
+  
+  const [resetSignal, setResetSignal] = useState(0);
 
+  // 트림 상세 정보 가져오기
   const fetchCarDetail = async (trimId) => {
     try {
       const res = await fetch(`${API_BASE}/detail?trimId=${trimId}`);
@@ -427,107 +241,109 @@ export default function CompareQuotePage() {
     }
   };
 
-  const handleSearchCar1 = async (trimId) => {
+  // 차량 1 선택 완료 핸들러 (트림 ID만 받음)
+  const handleSelect1 = async (trimId) => {
     const data = await fetchCarDetail(trimId);
-    if (data) setCar1Result(data);
+    if (data) {
+      setCar1Data(data);
+      setCar1Opts(new Set()); // 옵션 초기화
+    }
   };
 
-  const handleSearchCar2 = async (trimId) => {
+  // 차량 2 선택 완료 핸들러 (트림 ID만 받음)
+  const handleSelect2 = async (trimId) => {
     const data = await fetchCarDetail(trimId);
-    if (data) setCar2Result(data);
+    if (data) {
+      setCar2Data(data);
+      setCar2Opts(new Set()); // 옵션 초기화
+    }
   };
 
   const handleResetAll = () => {
-    setCar1Result(null);
-    setCar2Result(null);
-    setResetAllSignal((prev) => prev + 1);
+    setCar1Data(null);
+    setCar2Data(null);
+    setCar1Opts(new Set());
+    setCar2Opts(new Set());
+    setResetSignal(prev => prev + 1);
+  };
+
+  // 옵션 토글 함수
+  const toggleCar1Opt = (optId) => {
+    const newSet = new Set(car1Opts);
+    if (newSet.has(optId)) newSet.delete(optId);
+    else newSet.add(optId);
+    setCar1Opts(newSet);
+  };
+
+  const toggleCar2Opt = (optId) => {
+    const newSet = new Set(car2Opts);
+    if (newSet.has(optId)) newSet.delete(optId);
+    else newSet.add(optId);
+    setCar2Opts(newSet);
+  };
+
+  // [중요] 결과 보기 버튼 핸들러
+  const handleViewResult = () => {
+    if (!car1Data || !car2Data) {
+      alert("비교할 차량 2대를 모두 조회(선택)해 주세요.");
+      return;
+    }
+    
+    // URL 생성: ids=트림1,트림2 & opts1=옵션1,옵션2 & opts2=옵션3,옵션4
+    const ids = `${car1Data._id},${car2Data._id}`;
+    const opts1 = Array.from(car1Opts).join(",");
+    const opts2 = Array.from(car2Opts).join(",");
+    
+    // 결과 페이지로 이동 (옵션 정보 포함)
+    router.push(`/quote/compare/vs?ids=${ids}&opts1=${opts1}&opts2=${opts2}`);
   };
 
   return (
     <main style={{ backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 40px 60px" }}>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            marginBottom: "12px",
-            cursor: "pointer",
-            fontSize: "14px",
-            color: "#555",
-          }}
-        >
-          ← 뒤로 가기
-        </button>
+        <button onClick={() => router.back()} style={{ background: "none", border: "none", padding: 0, marginBottom: "12px", cursor: "pointer", fontSize: "14px", color: "#555" }}>← 뒤로 가기</button>
 
-        <div
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: "16px",
-            padding: "24px 32px",
-            marginBottom: "24px",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ backgroundColor: "#fff", borderRadius: "16px", padding: "24px 32px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
             <div style={{ width: "6px", height: "60px", borderRadius: "4px", background: "linear-gradient(180deg, #3b82f6, #1d4ed8)" }} />
             <div>
-              <div style={{ fontSize: "24px", fontWeight: 800, color: "#1d4ed8", marginBottom: "6px" }}>
-                비교견적 페이지
-              </div>
-              <div style={{ fontSize: "15px", color: "#555" }}>
-                여기에서 두 대의 차량을 동시에 선택해서 옵션과 가격을 비교할 수 있습니다.
-              </div>
+              <div style={{ fontSize: "24px", fontWeight: 800, color: "#1d4ed8", marginBottom: "6px" }}>비교견적 페이지</div>
+              <div style={{ fontSize: "15px", color: "#555" }}>차량과 옵션을 선택하여 가격을 비교해보세요.</div>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={handleResetAll}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "999px",
-              border: "1px solid #ddd",
-              backgroundColor: "#f9fafb",
-              fontSize: "13px",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            전체 초기화
-          </button>
+          <button onClick={handleResetAll} style={btnResetStyle}>전체 초기화</button>
         </div>
 
+        {/* 차량 선택 박스 영역 (옵션 선택 기능 빠짐) */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
-          <CarSelector
-            title="비교 차량 1"
-            onSearch={handleSearchCar1}
-            onReset={() => setCar1Result(null)}
-            resetSignal={resetAllSignal}
-          />
-          <CarSelector
-            title="비교 차량 2"
-            onSearch={handleSearchCar2}
-            onReset={() => setCar2Result(null)}
-            resetSignal={resetAllSignal}
-          />
+          <CarSelector title="비교 차량 1" onSelectComplete={handleSelect1} onReset={() => setCar1Data(null)} resetSignal={resetSignal} />
+          <CarSelector title="비교 차량 2" onSelectComplete={handleSelect2} onReset={() => setCar2Data(null)} resetSignal={resetSignal} />
         </div>
 
-        {(car1Result || car2Result) && (
+        {/* 하단 옵션 선택 및 비교 영역 (선택된 차량이 있을 때만 보임) */}
+        {(car1Data || car2Data) && (
           <div style={{ marginTop: "40px" }}>
-            <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>
-              비교 견적 결과
+            <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "16px" }}>옵션 선택 및 비교</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "24px" }}>
+              {/* 차량 1 옵션 카드 */}
+              {car1Data ? (
+                <CarOptionSelectCard data={car1Data} selectedSet={car1Opts} onToggle={toggleCar1Opt} />
+              ) : <div />}
+              
+              {/* 차량 2 옵션 카드 */}
+              {car2Data ? (
+                <CarOptionSelectCard data={car2Data} selectedSet={car2Opts} onToggle={toggleCar2Opt} />
+              ) : <div />}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: "24px" }}>
-              {car1Result && <CarResultCard data={car1Result} />}
-              {car2Result && <CarResultCard data={car2Result} />}
-            </div>
+            {/* 결과 보기 버튼 (두 차량 모두 선택되었을 때만 활성화) */}
+            {car1Data && car2Data && (
+              <div style={{ marginTop: "28px" }}>
+                <button onClick={handleViewResult} style={btnResultStyle}>
+                  결과 보기
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -535,10 +351,9 @@ export default function CompareQuotePage() {
   );
 }
 
-const selectStyle = {
-  width: "100%",
-  borderRadius: "8px",
-  border: "1px solid #ddd",
-  padding: "6px",
-  fontSize: "14px",
-};
+// 스타일
+const selectStyle = { width: "100%", borderRadius: "8px", border: "1px solid #ddd", padding: "6px", fontSize: "14px" };
+const labelStyle = { fontSize: "13px", color: "#777", marginBottom: "6px" };
+const btnResetStyle = { padding: "8px 16px", borderRadius: "999px", border: "1px solid #ddd", backgroundColor: "#f9fafb", fontSize: "13px", cursor: "pointer", whiteSpace: "nowrap" };
+const btnSearchStyle = { padding: "8px 18px", borderRadius: "999px", border: "none", backgroundColor: "#000", color: "#fff", fontSize: "13px", cursor: "pointer" };
+const btnResultStyle = { width: "100%", padding: "16px 0", borderRadius: "999px", border: "none", backgroundColor: "#111", color: "#fff", fontSize: "16px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" };

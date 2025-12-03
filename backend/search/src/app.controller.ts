@@ -1,20 +1,30 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 
-// [중요] 주소를 /cars 로 지정
-@Controller('cars') 
+@Controller('search')
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  // 1. 전체 목록 조회 (주소: GET /cars)
   @Get()
-  async getAllCars() {
-    return this.appService.findAll();
-  }
+  async search(@Query('keyword') keyword: string) {
+    // 빈 검색어 처리
+    if (!keyword) {
+      return {
+        success: true,
+        keyword: '',
+        result: { cars: [], community: [] },
+      };
+    }
 
-  // 2. 검색 기능 (주소: GET /cars/search?keyword=...)
-  @Get('search')
-  async searchCars(@Query('keyword') keyword: string) {
-    return this.appService.search(keyword);
+    const cars = await this.appService.searchCars(keyword);
+
+    return {
+      success: true,
+      keyword,
+      result: {
+        cars: cars,
+        community: [], // 커뮤니티 기능은 제외
+      },
+    };
   }
 }
