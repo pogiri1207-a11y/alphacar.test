@@ -1,19 +1,32 @@
+// backend/community/src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { CommunityPost } from './entities/community-post.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRootAsync({
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
+    TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (config: ConfigService) => ({
-        uri: `mongodb://${config.get('DATABASE_USER')}:${config.get('DATABASE_PASSWORD')}@${config.get('DATABASE_HOST')}:${config.get('DATABASE_PORT')}/${config.get('DATABASE_NAME')}?authSource=admin`,
-      }),
       inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'mariadb',
+        host: config.get<string>('MARIADB_HOST'),
+        port: config.get<number>('MARIADB_PORT'),
+        username: config.get<string>('MARIADB_USERNAME'),
+        password: config.get<string>('MARIADB_PASSWORD'),
+        database: config.get<string>('MARIADB_DATABASE'),
+	charset: 'utf8mb4',
+	entities: [CommunityPost],
+        synchronize: true, // 테이블 자동 생성
+        logging: true,
+      }),
     }),
+    // 👇 서비스에서 Board Repository를 쓰기 위해 필수 등록
+    TypeOrmModule.forFeature([CommunityPost]),
   ],
   controllers: [AppController],
   providers: [AppService],

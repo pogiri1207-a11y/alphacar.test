@@ -10,45 +10,110 @@ import YouTubeSection from "./components/YouTubeSection";
 // 유튜브 위젯을 보여줄 최소 화면 폭 (px)
 const YOUTUBE_MIN_WIDTH = 1650;
 
-    // 배너 데이터
 // 배너 데이터
 const bannerItems = [
   {
     id: 1,
     img: "/banners/banner1.png",
-    link: "/cashback",   // ✅ 1번 배너: 기존 캐시백 표 페이지
+    link: "/cashback", // ✅ 1번 배너: 캐시백 페이지
   },
   {
     id: 2,
     img: "/banners/banner2.png",
-    link: "/benefit",    // ✅ 2번 배너: 새로 만들 혜택 안내 페이지
+    link: "/benefit", // ✅ 2번 배너: 내차 구매 혜택 안내 페이지
   },
   {
     id: 3,
     img: "/banners/banner3.png",
-    link: "/quote",      // ✅ 3번 배너: 기존 비교견적 페이지
+    link: "/quote", // ✅ 3번 배너: 비교 견적 페이지
   },
 ];
 
-// TOP 10 이미지 (샘플)
-const topCarImages = [
+// 국내 자동차 판매 순위 TOP 5 (샘플 데이터)
+const domesticTop5 = [
   {
-    id: 1,
-    name: "더 뉴 아이오닉 6 - E-LITE(롱레인지) 18인치",
-    priceText: "50,640,843 원",
-    img: "/topcars/new_ioniq6.png",
+    rank: 1,
+    name: "쏘렌토",
+    sales: "10,047",
+    share: "8.6%",
+    prev: "6,788",
+    total: "10,434",
   },
   {
-    id: 2,
-    name: "넥쏘 수소 전기차",
-    priceText: "70,000,000 원",
-    img: "/topcars/new_nexo.png",
+    rank: 2,
+    name: "스포티지",
+    sales: "6,868",
+    share: "5.9%",
+    prev: "4,055",
+    total: "4,100",
   },
   {
-    id: 3,
-    name: "아이오닉 6 (기본형)",
-    priceText: "53,340,000 원",
-    img: "/topcars/ioniq6.png",
+    rank: 3,
+    name: "그랜저",
+    sales: "6,499",
+    share: "5.6%",
+    prev: "5,074",
+    total: "5,047",
+  },
+  {
+    rank: 4,
+    name: "쏘나타 더 엣지",
+    sales: "5,897",
+    share: "5.1%",
+    prev: "4,603",
+    total: "6,658",
+  },
+  {
+    rank: 5,
+    name: "투싼",
+    sales: "5,384",
+    share: "4.6%",
+    prev: "3,909",
+    total: "5,583",
+  },
+];
+
+// 외제 자동차 판매 순위 TOP 5 (샘플 데이터)
+const foreignTop5 = [
+  {
+    rank: 1,
+    name: "Model Y",
+    sales: "3,712",
+    share: "15.4%",
+    prev: "8,361",
+    total: "3,712",
+  },
+  {
+    rank: 2,
+    name: "E-Class",
+    sales: "2,489",
+    share: "10.3%",
+    prev: "3,273",
+    total: "2,543",
+  },
+  {
+    rank: 3,
+    name: "5 Series",
+    sales: "1,783",
+    share: "7.4%",
+    prev: "2,196",
+    total: "2,073",
+  },
+  {
+    rank: 4,
+    name: "GLE-Class",
+    sales: "758",
+    share: "3.2%",
+    prev: "692",
+    total: "343",
+  },
+  {
+    rank: 5,
+    name: "GLC-Class",
+    sales: "752",
+    share: "3.1%",
+    prev: "900",
+    total: "771",
   },
 ];
 
@@ -87,12 +152,9 @@ export default function HomePage() {
   const router = useRouter();
 
   const [bannerIndex, setBannerIndex] = useState(0);
-  const [topCarIndex, setTopCarIndex] = useState(0);
 
   const safeBannerIndex =
     typeof window === "undefined" ? 0 : bannerIndex;
-  const safeTopCarIndex =
-    typeof window === "undefined" ? 0 : topCarIndex;
 
   const [carList, setCarList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -124,15 +186,6 @@ export default function HomePage() {
     const timer = setInterval(
       () => setBannerIndex((prev) => (prev + 1) % bannerItems.length),
       4000
-    );
-    return () => clearInterval(timer);
-  }, []);
-
-  // TOP10 자동 슬라이드
-  useEffect(() => {
-    const timer = setInterval(
-      () => setTopCarIndex((prev) => (prev + 1) % topCarImages.length),
-      3000
     );
     return () => clearInterval(timer);
   }, []);
@@ -205,7 +258,7 @@ export default function HomePage() {
           style={{
             position: "fixed",
             top: "170px", // 배너 안 가리게 살짝 아래
-            right: "20px",
+            right: "2px",
             zIndex: 1000,
           }}
         >
@@ -300,100 +353,240 @@ export default function HomePage() {
         </form>
       </section>
 
-      {/* TOP 10 */}
-      <section className="topcar-section">
-        <h3>ALPHACAR 추천 TOP 10</h3>
+      {/* 판매 순위 TOP 5 (국내 / 외제) */}
+      <section
+        style={{
+          margin: "30px auto 0",
+          padding: "0 40px",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "18px",
+            fontWeight: "700",
+            marginBottom: "18px",
+          }}
+        >
+          ALPHACAR 판매 순위 TOP 5
+        </h3>
 
-        {topCarImages.length > 0 && (
-          <div
-            className="topcar-slider"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "30px 40px",
-              boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
-              minHeight: "260px",
-            }}
-          >
-            <div
-              className="topcar-image-wrap"
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "20px",
+            padding: "24px 28px 28px",
+            boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+            display: "flex",
+            gap: "32px",
+            flexWrap: "wrap",
+          }}
+        >
+          {/* 국내 자동차 TOP 5 */}
+          <div style={{ flex: 1, minWidth: "320px" }}>
+            <h4
               style={{
-                flex: 1.4,
-                background: "#f2f2f2",
-                borderRadius: "16px",
-                padding: "20px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxSizing: "border-box",
-                height: "260px",
+                fontSize: "16px",
+                fontWeight: "700",
+                marginBottom: "10px",
               }}
             >
-              <img
-                src={topCarImages[safeTopCarIndex].img}
-                alt={topCarImages[safeTopCarIndex].name}
-                className="topcar-image"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  width: "auto",
-                  height: "auto",
-                  objectFit: "contain",
-                }}
-              />
-            </div>
+              국내 자동차 판매 순위 TOP 5
+            </h4>
 
+            {/* 헤더 라인 */}
             <div
-              className="topcar-info"
               style={{
-                flex: 1,
-                paddingLeft: "40px",
                 display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
+                fontSize: "12px",
+                color: "#999",
+                padding: "6px 0",
+                borderBottom: "1px solid #eee",
               }}
             >
-              <p
-                className="topcar-name"
-                style={{
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  marginBottom: "12px",
-                }}
-              >
-                {topCarImages[safeTopCarIndex].name}
-              </p>
-              <p
-                className="topcar-sub"
-                style={{
-                  fontSize: "14px",
-                  color: "#888",
-                  marginBottom: "16px",
-                }}
-              >
-                ALPHACAR 데이터 기반 인기 차량
-              </p>
-              <p
-                className="topcar-price-title"
-                style={{
-                  fontSize: "14px",
-                  color: "#999",
-                  marginBottom: "4px",
-                }}
-              >
-                세제 혜택 적용 후 차량 가격
-              </p>
-              <p
-                className="topcar-price"
-                style={{ fontSize: "20px", fontWeight: 700 }}
-              >
-                {topCarImages[safeTopCarIndex].priceText}
-              </p>
+              <div style={{ width: "32px" }}>순위</div>
+              <div style={{ flex: 1 }}>차량명</div>
+              <div style={{ width: "80px", textAlign: "right" }}>판매량</div>
+              <div style={{ width: "60px", textAlign: "right" }}>점유율</div>
+              <div style={{ width: "80px", textAlign: "right" }}>전월</div>
+              <div style={{ width: "80px", textAlign: "right" }}>누적</div>
             </div>
+
+            {domesticTop5.map((car) => (
+              <div
+                key={car.rank}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "8px 0",
+                  borderBottom: "1px solid #f5f5f5",
+                  fontSize: "13px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      background: "#0070f3",
+                      color: "#fff",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {car.rank}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {/* 썸네일 자리 (나중에 이미지 들어갈 자리) */}
+                  <div
+                    style={{
+                      width: "56px",
+                      height: "32px",
+                      borderRadius: "6px",
+                      background: "#f3f3f3",
+                    }}
+                  />
+                  <span style={{ fontWeight: 500 }}>{car.name}</span>
+                  <span style={{ fontSize: "12px", color: "#bbb" }}>📊</span>
+                </div>
+
+                <div style={{ width: "80px", textAlign: "right" }}>
+                  {car.sales}
+                </div>
+                <div style={{ width: "60px", textAlign: "right" }}>
+                  {car.share}
+                </div>
+                <div style={{ width: "80px", textAlign: "right" }}>
+                  {car.prev}
+                </div>
+                <div style={{ width: "80px", textAlign: "right" }}>
+                  {car.total}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+
+          {/* 외제 자동차 TOP 5 */}
+          <div style={{ flex: 1, minWidth: "320px" }}>
+            <h4
+              style={{
+                fontSize: "16px",
+                fontWeight: "700",
+                marginBottom: "10px",
+              }}
+            >
+              외제 자동차 판매 순위 TOP 5
+            </h4>
+
+            {/* 헤더 라인 */}
+            <div
+              style={{
+                display: "flex",
+                fontSize: "12px",
+                color: "#999",
+                padding: "6px 0",
+                borderBottom: "1px solid #eee",
+              }}
+            >
+              <div style={{ width: "32px" }}>순위</div>
+              <div style={{ flex: 1 }}>차량명</div>
+              <div style={{ width: "80px", textAlign: "right" }}>판매량</div>
+              <div style={{ width: "60px", textAlign: "right" }}>점유율</div>
+              <div style={{ width: "80px", textAlign: "right" }}>전월</div>
+              <div style={{ width: "80px", textAlign: "right" }}>누적</div>
+            </div>
+
+            {foreignTop5.map((car) => (
+              <div
+                key={car.rank}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: "8px 0",
+                  borderBottom: "1px solid #f5f5f5",
+                  fontSize: "13px",
+                }}
+              >
+                <div
+                  style={{
+                    width: "32px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      background: "#ff4d4f",
+                      color: "#fff",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                    }}
+                  >
+                    {car.rank}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  {/* 썸네일 자리 (나중에 이미지 들어갈 자리) */}
+                  <div
+                    style={{
+                      width: "56px",
+                      height: "32px",
+                      borderRadius: "6px",
+                      background: "#f3f3f3",
+                    }}
+                  />
+                  <span style={{ fontWeight: 500 }}>{car.name}</span>
+                  <span style={{ fontSize: "12px", color: "#bbb" }}>📊</span>
+                </div>
+
+                <div style={{ width: "80px", textAlign: "right" }}>
+                  {car.sales}
+                </div>
+                <div style={{ width: "60px", textAlign: "right" }}>
+                  {car.share}
+                </div>
+                <div style={{ width: "80px", textAlign: "right" }}>
+                  {car.prev}
+                </div>
+                <div style={{ width: "80px", textAlign: "right" }}>
+                  {car.total}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* 브랜드 탭 + 차량 리스트 */}
@@ -452,7 +645,12 @@ export default function HomePage() {
                   <span style={{ color: "#ccc" }}>이미지 없음</span>
                 )}
               </div>
-              <div className="car-info">
+
+              {/* ✅ 이름 + 가격 가운데 정렬, 상세보기 버튼 제거 */}
+              <div
+                className="car-info"
+                style={{ alignItems: "center", textAlign: "center" }}
+              >
                 <p className="car-name">
                   [{car.manufacturer || "미분류"}]{" "}
                   {car.name || "이름 없음"}
@@ -460,7 +658,6 @@ export default function HomePage() {
                 <p className="car-price">
                   {formatPrice(car.minPrice)} ~
                 </p>
-                <button className="car-detail-btn">상세보기</button>
               </div>
             </div>
           ))}

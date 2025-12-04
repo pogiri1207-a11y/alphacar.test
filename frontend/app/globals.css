@@ -85,9 +85,6 @@ a {
   overflow: hidden;
 }
 
-/* ❌ 기존 113줄 부근의 중복된 .banner-dots 및 .dot 정의 블록은 삭제됨 */
-
-
 /* 실제 배너 이미지 */
 .banner-img {
   width: 100%;
@@ -130,7 +127,7 @@ a {
   transform: translateX(-50%); /* 중앙 정렬 */
   display: flex;
   gap: 8px;
-  
+
   /* 🚨 수정: UI 가시성 개선 */
   background: rgba(0, 0, 0, 0.4); /* 배경색을 추가하여 배너 위에 놓았을 때 잘 보이게 함 */
   border-radius: 10px; /* 배경 모서리 둥글게 */
@@ -143,21 +140,21 @@ a {
   border-radius: 999px;
   border: none;
   /* 🚨 수정: 점 색상을 흰색으로 변경 */
-  background-color: rgba(255, 255, 255, 0.5); 
+  background-color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   padding: 0;
   /* 🚨 수정: 전환 효과 추가 */
-  transition: all 0.2s ease; 
+  transition: all 0.2s ease;
 }
 
 .dot.active {
   width: 18px;
   /* 🚨 수정: 활성 점을 불투명 흰색으로 */
-  background-color: #ffffff; 
+  background-color: #ffffff;
   /* 🚨 수정: 길게 보이도록 사각형에 가까운 형태로 */
-  border-radius: 4px; 
+  border-radius: 4px;
   /* 🚨 수정: 확대 효과 제거 */
-  transform: none; 
+  transform: none;
 }
 /* ---------------------------------------------------- */
 
@@ -270,20 +267,23 @@ a {
   margin-top: 32px;
 }
 
+/* ✅ 브랜드 버튼 9개씩 3줄로 정렬 */
 .brand-tabs {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr)); /* 한 줄에 9개 */
   gap: 8px;
   margin-bottom: 16px;
 }
 
 .brand-btn {
+  width: 100%;              /* 그리드 셀 전체 채우기 */
   padding: 6px 14px;
   border-radius: 999px;
   border: 1px solid #ddd;
   background-color: white;
   font-size: 13px;
   cursor: pointer;
+  text-align: center;
 }
 
 .brand-btn-active {

@@ -17,6 +17,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {       // 👈 [추가] 경로 별칭 설정
+      "@/*": ["./*"]
+    },
     "plugins": [
       {
         "name": "next"
@@ -29,7 +33,9 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    "**/*.js",      // 👈 [추가] JS 파일도 포함
+    "**/*.jsx"      // 👈 [추가] JSX 파일도 포함
   ],
   "exclude": [
     "node_modules"

@@ -1,8 +1,9 @@
 // app/community/write/page.js
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // 👈 [수정] useEffect 추가
 import { useRouter } from "next/navigation";
+import { createCommunityPost, fetchMypageInfo } from "@/lib/api";
 
 export default function CommunityWritePage() {
   const router = useRouter();
@@ -10,8 +11,37 @@ export default function CommunityWritePage() {
   const [category, setCategory] = useState("구매 고민");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [author, setAuthor] = useState(""); // 작성자 상태 추가
+  const [userId, setUserId] = useState(null); // 👈 [추가] userId 상태 추가
 
-  const handleSubmit = (e) => {
+  // ✅ 수정된 useEffect: localStorage 대신 API 호출
+  useEffect(() => {
+    async function getUserInfo() {
+      try {
+        // 백엔드에 "나 누구야?" 하고 물어봄 (DB에서 조회)
+        const data = await fetchMypageInfo();
+
+        if (data && data.isLoggedIn && data.user) {
+          // DB에 저장된 닉네임(또는 이름)을 가져와서 설정
+          // users 테이블 컬럼명에 따라 data.user.nickname 또는 data.user.name 사용
+          setAuthor(data.user.nickname || data.user.name || "익명");
+	  setUserId(data.user.id); // 👈 [추가] 유저 ID 저장
+        } else {
+          alert("로그인이 필요한 서비스입니다.");
+          router.push("/mypage/login");
+        }
+      } catch (error) {
+        console.error("사용자 정보 로딩 실패:", error);
+        alert("로그인 정보를 불러올 수 없습니다.");
+        //router.push("/mypage/login");
+      }
+    }
+
+    getUserInfo();
+  }, [router]);
+
+  // 👇 백엔드 연동을 위한 핸들러
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!title.trim()) {
@@ -22,10 +52,29 @@ export default function CommunityWritePage() {
       alert("내용을 입력해 주세요.");
       return;
     }
+    // 🚨 [추가] 유저 ID가 없으면 등록 불가
+    if (!userId) {
+        alert("사용자 정보를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.");
+        return;
+    }
 
-    // TODO: 나중에 백엔드 연동
-    alert("글이 등록되었습니다. (현재는 프론트만 구현 상태)");
-    router.push("/community");
+    try {
+      // 백엔드 API 호출 (DB 저장 요청)
+      await createCommunityPost({
+        category, // "구매 고민" or "오너 리뷰"
+        title,
+        content,
+        author: author,
+	userId: userId,
+      });
+
+      // 성공 시 처리
+      alert("글이 등록되었습니다.");
+      router.push("/community");
+    } catch (error) {
+      console.error("글 등록 실패:", error);
+      alert("글 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    }
   };
 
   const handleCancel = () => {
@@ -228,4 +277,3 @@ export default function CommunityWritePage() {
     </div>
   );
 }
-

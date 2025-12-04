@@ -1,8 +1,10 @@
 // app/community/page.js
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { fetchCommunityPosts } from "@/lib/api";
+import { STATIC_NOTICES } from "./staticNotices";
 
 const TABS = [
   { key: "all", label: "전체" },
@@ -10,67 +12,93 @@ const TABS = [
   { key: "review", label: "오너 리뷰" },
 ];
 
-const SAMPLE_POSTS = [
-  {
-    id: 156,
-    no: 156,
-    type: "공지",
-    category: "notice",
-    title: "알파카 김포지점 GRAND OPEN 🔔",
-    date: "2025-11-28",
-  },
-  {
-    id: 155,
-    no: 155,
-    type: "공지",
-    category: "notice",
-    title: "알파카 연장보증 서비스 약관 개정 안내 (2025-12-01)",
-    date: "2025-11-25",
-  },
-  {
-    id: 154,
-    no: 154,
-    type: "공지",
-    category: "notice",
-    title: "알파카 연장보증 서비스 약관 개정 안내 (2025-12-01)",
-    date: "2025-11-25",
-  },
-  {
-    id: 153,
-    no: 153,
-    type: "일반",
-    category: "buy",
-    title: "그랜저 하이브리드 vs G80 중에 고민입니다",
-    date: "2025-11-29",
-  },
-  {
-    id: 152,
-    no: 152,
-    type: "일반",
-    category: "review",
-    title: "쏘나타 N라인 1년 탄 솔직 후기",
-    date: "2025-11-20",
-  },
-];
+const ITEMS_PER_PAGE = 10; // 한 페이지 최대 10개
 
 export default function CommunityPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("all");
   const [searchText, setSearchText] = useState("");
+  const [posts, setPosts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // ✅ 게시글 + 고정 공지 로딩
+  useEffect(() => {
+    async function loadPosts() {
+      try {
+        const data = await fetchCommunityPosts();
+        const backendPosts = data?.posts ?? [];
+
+        // 1) 백엔드 글: 최신순 정렬 + 카테고리 정리
+        const dynamicPosts = backendPosts
+          .slice()
+          .sort((a, b) => b.id - a.id)
+          .map((post) => {
+            let categoryKey = "etc";
+            if (post.category === "구매 고민") categoryKey = "buy";
+            if (post.category === "오너 리뷰") categoryKey = "review";
+
+            const isNotice = post.category === "공지" || categoryKey === "notice";
+
+            return {
+              ...post,
+              categoryKey: isNotice ? "notice" : categoryKey,
+              categoryText: isNotice ? "" : post.category,
+              type: isNotice ? "공지" : "일반",
+            };
+          });
+
+        // 2) 고정 공지 2개를 맨 위에 추가
+        const staticNoticePosts = STATIC_NOTICES.map((notice) => ({
+          ...notice,
+          categoryKey: "notice",
+          categoryText: "",
+          type: "공지",
+          isStaticNotice: true,
+        }));
+
+        // 3) 최종 목록: 공지 → 일반 글
+        setPosts([...staticNoticePosts, ...dynamicPosts]);
+      } catch (error) {
+        console.error("게시글 목록 로딩 실패:", error);
+      }
+    }
+    loadPosts();
+  }, []);
 
   const handleWriteClick = () => {
     router.push("/community/write");
   };
 
-  const filtered = SAMPLE_POSTS.filter((post) => {
-    if (activeTab === "buy" && post.category !== "buy") return false;
-    if (activeTab === "review" && post.category !== "review") return false;
+  // 탭/검색 바뀌면 1페이지로 초기화
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchText, posts.length]);
+
+  // ✅ 필터링
+  const filtered = posts.filter((post) => {
+    if (activeTab === "buy" && post.categoryKey !== "buy") return false;
+    if (activeTab === "review" && post.categoryKey !== "review") return false;
+
     if (searchText.trim()) {
       const keyword = searchText.trim();
-      if (!post.title.includes(keyword)) return false;
+      // 제목 + 내용 둘 다 검색
+      const target = `${post.title ?? ""} ${post.content ?? ""}`;
+      if (!target.includes(keyword)) return false;
     }
     return true;
   });
+
+  // ✅ 페이지 계산
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+  const pagePosts = filtered.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // 현재 페이지에서 보여줄 No. 번호 다시 매기기
+  const numberedPosts = pagePosts.map((post, index) => ({
+    ...post,
+    no: startIndex + index + 1,
+  }));
 
   return (
     <div
@@ -180,8 +208,7 @@ export default function CommunityPage() {
             }}
           >
             <div>
-              총{" "}
-              <span style={{ fontWeight: 600 }}>{filtered.length}건</span>
+              총 <span style={{ fontWeight: 600 }}>{filtered.length}건</span>
             </div>
 
             {/* 검색창 */}
@@ -240,45 +267,81 @@ export default function CommunityPage() {
           </div>
 
           {/* 게시글 목록 */}
-          {filtered.map((post) => (
-            <div
-              key={post.id}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "80px 1fr 140px",
-                padding: "12px",
-                borderBottom: "1px solid #f3f4f6",
-                fontSize: "13px",
-                alignItems: "center",
-                cursor: "pointer",
-              }}
-              onClick={() => alert("상세페이지는 나중에 연결할게요")}
-            >
-              <div style={{ color: "#6b7280" }}>{post.no}</div>
-              <div>
-                {post.type === "공지" && (
-                  <span
-                    style={{
-                      display: "inline-block",
-                      marginRight: "6px",
-                      padding: "2px 8px",
-                      borderRadius: "999px",
-                      border: "1px solid #2563eb",
-                      color: "#2563eb",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                    }}
-                  >
-                    공지
-                  </span>
-                )}
-                <span>{post.title}</span>
-              </div>
-              <div style={{ color: "#6b7280" }}>{post.date}</div>
-            </div>
-          ))}
+          {numberedPosts.length > 0 ? (
+            numberedPosts.map((post) => (
+              <div
+                key={post.id}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "80px 1fr 140px",
+                  padding: "12px",
+                  borderBottom: "1px solid #f3f4f6",
+                  fontSize: "13px",
+                  alignItems: "center",
+                  cursor: "pointer",
+                }}
+                onClick={() => router.push(`/community/${post.id}`)}
+              >
+                <div style={{ color: "#6b7280" }}>{post.no}</div>
 
-          {/* 페이지네이션 (mock) */}
+                <div>
+                  {/* 공지 배지 / 일반 카테고리 배지 */}
+                  {post.type === "공지" ? (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        marginRight: "6px",
+                        padding: "2px 8px",
+                        borderRadius: "999px",
+                        border: "1px solid #2563eb",
+                        color: "#2563eb",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      공지
+                    </span>
+                  ) : (
+                    post.categoryText && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          marginRight: "6px",
+                          padding: "2px 8px",
+                          borderRadius: "999px",
+                          backgroundColor: "#f3f4ff",
+                          color: "#4b5563",
+                          fontSize: "11px",
+                        }}
+                      >
+                        {post.categoryText}
+                      </span>
+                    )
+                  )}
+
+                  <span>{post.title}</span>
+                </div>
+
+                <div style={{ color: "#6b7280" }}>
+                  {post.date || post.createdAt}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div
+              style={{
+                padding: "60px 0",
+                textAlign: "center",
+                fontSize: "14px",
+                color: "#9ca3af",
+                borderBottom: "1px solid #f3f4f6",
+              }}
+            >
+              등록된 게시글이 없습니다.
+            </div>
+          )}
+
+          {/* 페이지네이션 */}
           <div
             style={{
               marginTop: "16px",
@@ -288,21 +351,24 @@ export default function CommunityPage() {
               fontSize: "13px",
             }}
           >
-            {[1, 2, 3, 4, 5].map((page) => (
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
                 key={page}
                 type="button"
                 style={{
-                  width: "28px",
+                  minWidth: "28px",
                   height: "28px",
                   borderRadius: "4px",
                   border:
-                    page === 1 ? "1px solid #111827" : "1px solid #e5e7eb",
-                  backgroundColor: page === 1 ? "#111827" : "#ffffff",
-                  color: page === 1 ? "#ffffff" : "#4b5563",
+                    page === safePage
+                      ? "1px solid #111827"
+                      : "1px solid #e5e7eb",
+                  backgroundColor:
+                    page === safePage ? "#111827" : "#ffffff",
+                  color: page === safePage ? "#ffffff" : "#4b5563",
                   cursor: "pointer",
                 }}
-                onClick={() => alert("페이지네이션은 나중에 백엔드 연동")}
+                onClick={() => setCurrentPage(page)}
               >
                 {page}
               </button>

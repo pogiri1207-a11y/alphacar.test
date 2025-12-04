@@ -1,13 +1,16 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module'; // 👈 AuthModule 임포트
-import { AuthController } from './auth/auth.controller'; // 👈 AuthController 임포트
+import { AuthModule } from './auth/auth.module'; 
+import { AuthController } from './auth/auth.controller'; 
 import { User } from './entities/user.entity';
+
+import { AppController } from './app.controller'; // 👈 [추가]
+import { AppService } from './app.service';     // 👈 [추가]
 
 @Module({
   imports: [
-    // MariaDB 연결 설정
+    // MariaDB 연결 설정 (성공 코드 유지)
     TypeOrmModule.forRoot({
       type: 'mariadb',
       host: '211.46.52.151',
@@ -19,9 +22,14 @@ import { User } from './entities/user.entity';
       synchronize: true,
       logging: true,
     }),
-    AuthModule, // 👈 AuthModule 등록
+    AuthModule, 
+    
+    // 👇 [핵심 수정] AppService가 사용하는 User 엔티티의 Repository를 등록합니다.
+    TypeOrmModule.forFeature([User]), 
   ],
-  controllers: [AuthController], // 👈 AppController 대신 AuthController만 등록
-  providers: [],
+  // 👇 [수정] AppController를 등록하여 /mypage 경로를 활성화
+  controllers: [AppController, AuthController], 
+  // 👇 [수정] AppController가 사용하는 AppService를 등록
+  providers: [AppService], 
 })
 export class AppModule {}

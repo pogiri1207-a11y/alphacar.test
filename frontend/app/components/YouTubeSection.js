@@ -53,10 +53,10 @@ export default function YouTubeSection() {
 
   return (
     <div
-      // 🔒 고정 크기 (반응형 X)
+      // 고정 크기 (반응형 X)
       style={{
         width: 340,
-        height: 230,
+        height: 220,
       }}
     >
       {/* 상단 타이틀 + 다른 영상 보기 버튼 */}
@@ -65,12 +65,12 @@ export default function YouTubeSection() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 6,
+          marginBottom: 8,
         }}
       >
         <span
           style={{
-            fontSize: 13,
+            fontSize: 16,      // 🔺 글씨 조금 더 크게
             fontWeight: 700,
           }}
         >
@@ -90,82 +90,44 @@ export default function YouTubeSection() {
         </button>
       </div>
 
-      {/* 🔴 유튜브 TV 프레임 (영상 밑 글씨 없음!) */}
+      {/* 심플한 유튜브 카드 (빨간 배경 ❌) */}
       <a
         href={`https://www.youtube.com/watch?v=${current.id}`}
         target="_blank"
         rel="noreferrer"
         style={{
           display: "block",
-          width: 340,
+          width: "100%",
           textDecoration: "none",
           color: "#000",
         }}
       >
-        {/* TV 몸통 */}
         <div
           style={{
-            width: 320,
-            height: 190,
-            backgroundColor: "#FF0000",
-            borderRadius: 24,
-            padding: 8,
+            width: "100%",
+            height: 180,
+            backgroundColor: "#ffffff",
+            borderRadius: 16,
+            overflow: "hidden",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             boxSizing: "border-box",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            margin: "0 auto",
           }}
         >
-          {/* 검은 화면 안에 썸네일 */}
-          <div
+          <img
+            src={current.thumbnail}
+            alt={current.title}
             style={{
               width: "100%",
-              height: 160,
+              height: "100%",
+              objectFit: "contain", // 썸네일 안 잘리게
               backgroundColor: "#000",
-              borderRadius: 18,
-              overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
             }}
-          >
-            <img
-              src={current.thumbnail}
-              alt={current.title}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-              }}
-            />
-          </div>
-
-          {/* TV 다리(발) */}
-          <div
-            style={{
-              marginTop: 6,
-              display: "flex",
-              justifyContent: "center",
-              gap: 12,
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 6,
-                borderRadius: 999,
-                backgroundColor: "#B00000",
-              }}
-            />
-            <div
-              style={{
-                width: 28,
-                height: 6,
-                borderRadius: 999,
-                backgroundColor: "#B00000",
-              }}
-            />
-          </div>
+          />
         </div>
+        {/* 영상 아래 텍스트는 계속 숨김 (요청대로) */}
       </a>
     </div>
   );

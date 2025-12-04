@@ -5,14 +5,9 @@ import AiChatButton from "./AICHAT/AiChatButton";
 import LeftAdBanner from "./LeftAdBanner";
 import Footer from "./components/Footer";
 
-// 🔹 새로 추가된 플로팅 메뉴
-import FloatingQuickMenu from "./components/FloatingQuickMenu";
 
-export const metadata = {
-  title: "ALPHACAR",
-  description: "Car price comparison & drive info",
-};
-
+// 🔹 새로: RightSideBar만 사용
+import RightSideBar from "./RightSideBar";
 export default function RootLayout({ children }) {
   return (
     <html lang="ko">
@@ -51,7 +46,8 @@ export default function RootLayout({ children }) {
         </main>
 
         {/* 오른쪽 사이드 퀵메뉴 (새 디자인) */}
-        <FloatingQuickMenu />
+
+        <RightSideBar />
 
         {/* 오른쪽 하단 AI 챗봇 */}
         <AiChatButton />
