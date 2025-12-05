@@ -120,7 +120,7 @@ export default function RightSideBar() {
             type="button"
             onClick={() =>
               router.push("https://192.168.0.160.nip.io:8000/quote")
-            } // 🔹 여기서 외부 URL로 이동
+            } // 🔹 외부 URL로 이동
             onMouseEnter={() => setHoverTarget("compare")}
             onMouseLeave={() => setHoverTarget(null)}
             style={iconButtonStyle}
@@ -179,7 +179,7 @@ export default function RightSideBar() {
           </button>
         )}
 
-        {/* 열린 상태: X + 리스트 (가로폭 줄이고 전체 가운데 정렬) */}
+        {/* 열린 상태: X + 리스트 */}
         {isMenuOpen && (
           <div
             style={{
@@ -197,7 +197,7 @@ export default function RightSideBar() {
               textAlign: "center",
             }}
           >
-            {/* X 버튼 중앙 */}
+            {/* X 버튼 */}
             <button
               type="button"
               onClick={() => setIsMenuOpen(false)}
@@ -232,7 +232,7 @@ export default function RightSideBar() {
                 type="button"
                 onClick={() => {
                   setIsMenuOpen(false);
-                  router.push("/mypage");
+                  router.push("/mypage/login"); // 🔹 마이페이지 로그인으로 이동
                 }}
                 style={menuItemStyle}
               >
@@ -242,7 +242,7 @@ export default function RightSideBar() {
                 type="button"
                 onClick={() => {
                   setIsMenuOpen(false);
-                  alert("이벤트 페이지 준비 중입니다.");
+                  router.push("/event"); // 🔹 이벤트 첫 페이지로 이동
                 }}
                 style={menuItemStyle}
               >

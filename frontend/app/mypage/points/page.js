@@ -63,7 +63,7 @@ export default function MyPagePoints() {
   // 사용자 정보 & 포인트 값
   const nickname = user.nickname || "플렉스하는 알파카";
   const email = user.email || "AlphaFlex123@naver.com";
-  const provider = user.provider || "email"; // kakao / google / email
+  const provider = (user.provider || "email").toLowerCase(); // kakao / google / email
   const point = user.point ?? 0;
 
   return (

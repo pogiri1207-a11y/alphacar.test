@@ -462,7 +462,6 @@ export default function HomePage() {
                     }}
                   />
                   <span style={{ fontWeight: 500 }}>{car.name}</span>
-                  <span style={{ fontSize: "12px", color: "#bbb" }}>📊</span>
                 </div>
 
                 <div style={{ width: "80px", textAlign: "right" }}>
@@ -565,7 +564,6 @@ export default function HomePage() {
                     }}
                   />
                   <span style={{ fontWeight: 500 }}>{car.name}</span>
-                  <span style={{ fontSize: "12px", color: "#bbb" }}>📊</span>
                 </div>
 
                 <div style={{ width: "80px", textAlign: "right" }}>

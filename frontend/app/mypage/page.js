@@ -29,6 +29,9 @@ export default function MyPage() {
   const [user, setUser] = useState(null);
   const [checkedAuth, setCheckedAuth] = useState(false);
 
+  // 견적 개수 상태 관리
+  const [estimateCount, setEstimateCount] = useState(0);
+
   // 🔹 소셜 로그인 처리 + 백엔드에서 마이페이지 정보 가져오기
   useEffect(() => {
     const processAuth = async () => {
@@ -53,6 +56,11 @@ export default function MyPage() {
 
           const { access_token, user: loggedInUser } = response.data;
 
+          // ⭐ [핵심 수정] 백엔드에서 provider가 안 넘어오면 강제로 주입
+          if (!loggedInUser.provider) {
+            loggedInUser.provider = state === "google" ? "google" : "kakao";
+          }
+
           // ✅ 백엔드에서 사용하는 socialId 저장
           if (loggedInUser.socialId) {
             localStorage.setItem("user_social_id", loggedInUser.socialId);
@@ -62,7 +70,7 @@ export default function MyPage() {
             );
           }
 
-          // 기본 토큰 & 유저 정보 저장
+          // 기본 토큰 & 유저 정보 저장 (이제 provider가 포함됨)
           localStorage.setItem("accessToken", access_token);
           localStorage.setItem("alphacarUser", JSON.stringify(loggedInUser));
 
@@ -86,6 +94,13 @@ export default function MyPage() {
         const data = await fetchMypageInfo();
 
         if (data.isLoggedIn && data.user) {
+          // ⭐ [핵심 수정] 불러온 데이터에 provider가 없으면 로컬스토리지 값으로 보정
+          if (!data.user.provider) {
+            const localUser = JSON.parse(localStorage.getItem("alphacarUser") || "{}");
+            if (localUser.provider) {
+              data.user.provider = localUser.provider;
+            }
+          }
           setUser(data.user);
         } else {
           // 서버가 로그인 안 됐다고 응답한 경우
@@ -105,11 +120,42 @@ export default function MyPage() {
     processAuth();
   }, [code, router, state]);
 
+  // 로그인된 유저가 있다면 견적 개수(포트 3003) 가져오기
+  useEffect(() => {
+    if (user) {
+      const socialId = localStorage.getItem("user_social_id");
+      
+      if (socialId) {
+        fetch(`http://192.168.0.160:3003/estimate/count?userId=${socialId}`)
+          .then(async (res) => {
+            if (!res.ok) {
+              const errData = await res.json(); 
+              throw new Error(errData.message || "서버 요청 실패");
+            }
+            return res.json();
+          })
+          .then((data) => {
+            console.log("견적 개수 조회 성공:", data);
+            if (typeof data === 'number') {
+              setEstimateCount(data);
+            } else {
+              setEstimateCount(0);
+            }
+          })
+          .catch((err) => {
+            console.error("견적 개수 불러오기 실패:", err);
+            setEstimateCount(0);
+          });
+      }
+    }
+  }, [user]);
+
   // 🔹 로그아웃
   const handleLogout = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
       clearAuthStorage();
       setUser(null);
+      setEstimateCount(0); 
       alert("로그아웃 되었습니다.");
       router.replace("/mypage/login");
     }
@@ -134,7 +180,10 @@ export default function MyPage() {
     );
   }
 
-  // 🔻 여기부터는 "기존에 쓰던 예쁜 UI" 그대로 유지
+  // ✅ [수정] provider 변수 처리 (소문자 변환)
+  const provider = user?.provider ? user.provider.toLowerCase() : "email";
+
+  // 🔻 UI 렌더링
   return (
     <div
       style={{
@@ -207,6 +256,7 @@ export default function MyPage() {
                     fontSize: "14px",
                   }}
                 >
+                  {/* ✅ [수정] 배지 색상 및 텍스트 처리 */}
                   <span
                     style={{
                       display: "inline-flex",
@@ -215,16 +265,18 @@ export default function MyPage() {
                       padding: "4px 10px",
                       borderRadius: "999px",
                       background:
-                        user.provider === "kakao"
-                          ? "#FEE500"
-                          : user.provider === "google"
-                          ? "#E8F0FE"
-                          : "#f3f4f6",
+                        provider === "kakao"
+                          ? "#FEE500" // 카카오 노란색
+                          : provider === "google"
+                          ? "#fff"    // 구글 흰색
+                          : "#f3f4f6", // 기본 회색
+                      border: provider === "google" ? "1px solid #ddd" : "none",
                       fontSize: "12px",
                       fontWeight: 600,
+                      color: provider === "kakao" ? "#000" : "#333",
                     }}
                   >
-                    {(user.provider || "email").toUpperCase()}
+                    {provider.toUpperCase()}
                   </span>
                   <span style={{ color: "#555" }}>
                     {user.email || "AlphaFlex123@naver.com"}
@@ -251,7 +303,7 @@ export default function MyPage() {
               </button>
             </section>
 
-            {/* ✅ 견적함 / 포인트 카드 (숫자 영역 전체가 버튼) */}
+            {/* ✅ 견적함 / 포인트 카드 */}
             <section
               style={{
                 display: "grid",
@@ -286,7 +338,7 @@ export default function MyPage() {
                   견적함
                 </div>
                 <div style={{ fontSize: "20px", fontWeight: 700 }}>
-                  {user.quoteCount ?? 0}건
+                  {estimateCount}건
                 </div>
               </button>
 
@@ -477,4 +529,3 @@ export default function MyPage() {
     </div>
   );
 }
-
