@@ -263,7 +263,10 @@ a {
   color: var(--color-muted);
 }
 
-/* 브랜드 + 차량 리스트 */
+/* =======================
+   브랜드 + 차량 리스트
+   ======================= */
+
 .brand-section {
   margin-top: 32px;
 }
@@ -273,33 +276,43 @@ a {
   display: grid;
   grid-template-columns: repeat(9, minmax(0, 1fr));
   gap: 8px;
-  margin-bottom: 16px;
 }
 
+/* 기본 브랜드 버튼: 검색창 스타일 (회색 테두리) */
 .brand-btn {
   width: 100%;
   padding: 6px 14px;
   border-radius: 999px;
-  border: 1px solid var(--color-border);
+  border: 1px solid #e5e7eb;   /* 기본 연한 회색 테두리 */
   background-color: #ffffff;
+  color: #111111;
   font-size: 13px;
   cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
 }
 
-/* ✅ 브랜드 선택 상태도 블루 톤으로 통일 */
+/* 호버 시: 테두리/글씨만 파란색 */
+.brand-btn:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* 선택된 브랜드: 파란 테두리 + 파란 글씨 (배경은 흰색 유지) */
 .brand-btn-active {
-  border-color: var(--color-primary);
-  background-color: #e8f1ff;
-  color: var(--color-primary);
+  border-color: #2563eb;
+  color: #2563eb;
+  font-weight: 600;
 }
 
+/* 차량 리스트 */
 .car-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
 }
 
+/* 차량 카드 박스 */
 .car-card {
   background-color: #ffffff;
   border-radius: 14px;
@@ -310,6 +323,7 @@ a {
   gap: 10px;
 }
 
+/* 차량 이미지 들어가는 구역 */
 .car-image-placeholder {
   width: 100%;
   height: 120px;
@@ -623,95 +637,6 @@ body {
   color: #444;
 }
 
-/* =========================
-   GNB / 전체메뉴 공통 스타일
-   ========================= */
-
-/* 전체 기본 폰트 */
-:root {
-  --font-main: "SUIT", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-}
-
-html,
-body {
-  font-family: var(--font-main);
-}
-
-/* 상단 GNB 네비게이션 (견적 비교 / 소식 / 커뮤니티) */
-.gnb-nav {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  font-size: 15px;
-}
-
-.gnb-link {
-  position: relative;
-  text-decoration: none;
-  color: #222;
-  font-weight: 600;
-  padding-bottom: 4px;
-}
-
-.gnb-link:hover {
-  color: #111;
-}
-
-/* 선택된 메뉴 밑줄 애니메이션 */
-.gnb-link::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 2px;
-  width: 0;
-  background-color: #111;
-  transition: width 0.25s ease;
-}
-
-.gnb-link-active::after {
-  width: 100%;
-}
-
-/* =========================
-   전체메뉴(메가 메뉴) 패널
-   ========================= */
-
-.mega-menu-panel {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  width: 100%;
-  background-color: #ffffff;
-  border-top: 1px solid #eee;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
-  z-index: 999;
-}
-
-/* 안쪽 컨테이너 */
-.mega-menu-panel > div {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 40px 40px;
-}
-
-/* 인사말 영역 */
-.mega-greeting {
-  margin-bottom: 24px;
-  font-size: 18px;
-}
-
-.mega-greeting-name {
-  font-weight: 800;
-  margin-right: 4px;
-}
-
-.mega-greeting-sub {
-  font-weight: 500;
-  color: #444;
-}
-
 /* 6개 컬럼 그리드 (견적비교 / 소식 / 커뮤니티 / 이벤트 / 마이페이지+상담 / 혜택+고객센터) */
 .mega-menu-grid {
   display: grid;
@@ -736,7 +661,8 @@ body {
   font-weight: 800;
   letter-spacing: 0.03em;
 }
-/* 상단 GNB 밑줄 애니메이션 */
+
+/* 상단 GNB 밑줄 애니메이션 (업데이트 버전) */
 .gnb-link {
   position: relative;
   padding-bottom: 2px;
@@ -761,6 +687,7 @@ body {
   transform: scaleX(1);
   transform-origin: left;
 }
+
 /* 전체메뉴 박스 위에서 스르륵 내려오는 모션 */
 .mega-panel {
   animation: megaSlideDown 0.4s ease-out;
@@ -776,19 +703,185 @@ body {
     transform: translateY(0);
   }
 }
-/* 전체메뉴 박스 위에서 스르륵 내려오는 모션 */
-.mega-panel {
-  animation: megaSlideDown 0.4s ease-out;
+/* ===========================
+   제조사별 시승 신청 슬라이더
+=========================== */
+/* ===========================
+   제조사별 시승 신청 슬라이더
+=========================== */
+.brand-testdrive-section {
+  width: 100%;
+  margin: 60px 0 40px;
 }
 
-@keyframes megaSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
+.brand-testdrive-title {
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* 화면 최대한 채우는 느낌 (양쪽 여백 줄임, 최대 폭 넓힘) */
+.brand-testdrive-wrapper {
+  position: relative;
+  border-top: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 20px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1200px) {
+  .brand-testdrive-wrapper {
+    max-width: 100%;
+    padding: 16px 16px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+}
+
+.brand-testdrive-scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.brand-testdrive-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.brand-testdrive-list {
+  display: flex;
+  gap: 12px;
+  min-width: max-content;
+}
+
+/* 카드 더 크게 + 호버 확대 */
+.brand-testdrive-item {
+  width: 150px;
+  height: 120px;
+  border: 1px solid #e5e5e5;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.brand-testdrive-item:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+  border-color: #0066ff;
+}
+
+/* 로고 사이즈 업 */
+.brand-testdrive-logo {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.brand-testdrive-logo img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* 브랜드 이름 폰트 키움 */
+.brand-testdrive-name {
+  font-size: 14px;
+  color: #333333;
+}
+
+/* 좌우 화살표(동그라미 버튼) */
+.brand-testdrive-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #dddddd;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.brand-testdrive-arrow.left {
+  left: 8px;
+}
+
+.brand-testdrive-arrow.right {
+  right: 8px;
+}
+
+/* 아래 진행 바: 스크롤 위치와 연동 */
+.brand-testdrive-progress {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.brand-testdrive-progress-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 1200px) {
+  .brand-testdrive-progress-inner {
+    max-width: 100%;
+    padding: 0 16px;
   }
+}
+
+.brand-testdrive-progress-line {
+  flex: 1;
+  height: 2px;
+  background-color: #e5e5e5;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 검은 라인이 스크롤 비율만큼 채워짐 */
+.brand-testdrive-progress-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background-color: #111111;
+  transition: width 0.25s ease;
+}
+
+.brand-testdrive-progress-arrows {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  color: #666666;
+  margin-left: 10px;
+  align-items: center;
+}
+
+.brand-testdrive-progress-arrows button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 11px;
+  color: #666666;
+  cursor: pointer;
+}
+
+.brand-testdrive-progress-arrows span {
+  font-size: 11px;
+  color: #666666;
 }
 

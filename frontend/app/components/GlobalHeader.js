@@ -401,7 +401,7 @@ export default function GlobalHeader() {
                   titleHref="/event"
                   items={[
                     { label: "진행중 이벤트", href: "/event" },
-                    { label: "종료된 이벤트", href: "/event/closed" },
+                    { label: "종료된 이벤트", href: "/event/end" },
                   ]}
                 />
               </div>

@@ -1,13 +1,17 @@
-// kevin@devserver:~/alphacar/backend/quote/src/vehicles$ cat vehicles.module.ts
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { VehiclesController } from './vehicles.controller';
-import { AppService } from '../app.service';
-import { AppModule } from '../app.module';
+
+// [수정] 공통 스키마 경로 (상위로 3번 올라가야 합니다)
+import { Vehicle, VehicleSchema } from '../../../schemas/vehicle.schema';
 
 @Module({
-  imports: [],
+  imports: [
+    MongooseModule.forFeature([
+      // [수정] Vehicle 스키마 하나만 등록 (Trim, Option 제거)
+      { name: Vehicle.name, schema: VehicleSchema },
+    ]),
+  ],
   controllers: [VehiclesController],
-  // AppService의 기능을 사용하기 위해 providers에 추가
-  providers: [] 
 })
 export class VehiclesModule {}

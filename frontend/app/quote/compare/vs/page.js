@@ -45,12 +45,10 @@ function CompareVsContent() {
         setLoading(true);
         const baseUrl = "/api";
 
-        // ✅ [수정] 백엔드 경로 변경: /compare-data -> /vehicles/compare-data
+        // 백엔드에서 차량 정보(옵션 포함) 조회
         const res = await fetch(`${baseUrl}/vehicles/compare-data?ids=${idsParam}`);
-        
-        // ✅ [수정] 견고한 에러 핸들링 적용
         const data = await handleApiResponse(res);
-        
+
         setCars(data);
       } catch (err) {
         console.error("에러 발생:", err.message || err);
@@ -88,18 +86,28 @@ function CompareVsContent() {
     const basePrice = Number(carData.base_price || 0);
     const allOptions = carData.options || [];
 
-    // ✅ [수정됨] 옵션 필터링 시 ID 타입을 문자열로 변환하여 비교
-    const selectedOptions = allOptions.filter(opt => {
-        const optIdString = String(opt._id); // ObjectId를 문자열로 변환
-        return selectedSet.has(optIdString);
+    // 🚨 [핵심 수정] 옵션 매칭 로직 강화 (ID 매칭 + 인덱스 매칭)
+    const selectedOptions = allOptions.filter((opt, index) => {
+        // 1. 진짜 ID(_id)가 있고, 선택 목록에 있는지 확인
+        if (opt._id && selectedSet.has(String(opt._id))) {
+            return true;
+        }
+        
+        // 2. ID가 없어서 'opt-순서'로 넘어온 경우 확인 (Fallback)
+        const tempIndexId = `opt-${index}`;
+        if (selectedSet.has(tempIndexId)) {
+            return true;
+        }
+
+        return false;
     });
 
     // 옵션 가격 합계
-    const optionTotal = selectedOptions.reduce((sum, opt) => sum + (opt.price || 0), 0);
+    const optionTotal = selectedOptions.reduce((sum, opt) => sum + (opt.price || opt.option_price || 0), 0);
     const totalPrice = basePrice + optionTotal;
 
     const discountPrice = Math.floor(totalPrice * 0.95);
-    const monthly = Math.floor(discountPrice / 60 / 10000); 
+    const monthly = Math.floor(discountPrice / 60 / 10000);
 
     return {
       ...carData,
@@ -164,7 +172,7 @@ function CompareVsContent() {
           trim: car1.trim_name,
           price: car1.totalPrice,
           image: car1.image,
-          options: car1.selectedOptions.map(o => o.name)
+          options: car1.selectedOptions.map(o => o.name || o.option_name)
         },
         {
           manufacturer: car2.manufacturer,
@@ -172,15 +180,13 @@ function CompareVsContent() {
           trim: car2.trim_name,
           price: car2.totalPrice,
           image: car2.image,
-          options: car2.selectedOptions.map(o => o.name)
+          options: car2.selectedOptions.map(o => o.name || o.option_name)
         }
       ]
     };
 
     try {
       const baseUrl = "/api";
-      // /estimate 경로는 next.config.mjs에서 별도로 처리되므로 유지해도 되지만
-      // 일관성을 위해 여기도 체크 필요 (현재는 /api/estimate 로 가정)
       const res = await fetch(`${baseUrl}/estimate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -239,7 +245,7 @@ function CompareVsContent() {
             ))}
           </div>
 
-          {/* 2. 선택 옵션 내역 (✅ 여기가 이제 정상 출력됩니다) */}
+          {/* 2. 선택 옵션 내역 */}
           <div style={{ marginBottom: "40px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: "bold", marginBottom: "16px", borderBottom: "2px solid #eee", paddingBottom: "10px" }}>선택 옵션 내역</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px" }}>
@@ -248,8 +254,8 @@ function CompareVsContent() {
                   {car.selectedOptions.length > 0 ? (
                     car.selectedOptions.map((opt, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", marginBottom: "8px", borderBottom: "1px dashed #eee", paddingBottom: "4px" }}>
-                        <span>{opt.name}</span>
-                        <span style={{ fontWeight: "bold", color: "#555" }}>+{formatPrice(opt.price)}</span>
+                        <span>{opt.name || opt.option_name}</span>
+                        <span style={{ fontWeight: "bold", color: "#555" }}>+{formatPrice(opt.price || opt.option_price)}</span>
                       </div>
                     ))
                   ) : (
@@ -300,8 +306,8 @@ function CompareVsContent() {
 
           {/* 하단 버튼 */}
           <div style={{ marginTop: "30px" }}>
-            <button 
-              style={{ width: "100%", padding: "16px", borderRadius: "12px", border: "none", background: "#111", color: "#fff", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }} 
+            <button
+              style={{ width: "100%", padding: "16px", borderRadius: "12px", border: "none", background: "#111", color: "#fff", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }}
               onClick={handleSaveCompareQuote}
             >
               견적 저장

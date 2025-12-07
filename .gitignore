@@ -1,0 +1,9 @@
+# Jenkins data
+cicd/jenkins_home/
+
+# SonarQube, Trivy, Harbor runtime data
+cicd/sonarqube_data/
+cicd/sonarqube_logs/
+cicd/sonarqube_extensions/
+cicd/postgres_data/
+cicd/trivy/
