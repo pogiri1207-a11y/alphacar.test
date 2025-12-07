@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE = 'sonarqube' // Jenkins → System Configuration의 이름과 일치해야 함
+        SONARQUBE = 'sonarqube'
         SONAR_URL = 'http://192.168.0.160:9000'
         HARBOR_URL = '192.168.0.169'
         HARBOR_PROJECT = 'alphacar-project'
@@ -12,15 +12,12 @@ pipeline {
     }
 
     stages {
-
-        // 1️⃣ Git 코드 가져오기
         stage('Checkout Code') {
             steps {
                 git branch: 'main', url: "${GIT_REPO}"
             }
         }
 
-        // 2️⃣ 버전 읽기
         stage('Read Version') {
             steps {
                 script {
@@ -28,13 +25,10 @@ pipeline {
                     def frontendVersion = readFile('frontend/version.txt').trim()
                     env.BACKEND_VERSION = backendVersion
                     env.FRONTEND_VERSION = frontendVersion
-                    echo "🚀 Current Backend version: ${BACKEND_VERSION}"
-                    echo "🚀 Current Frontend version: ${FRONTEND_VERSION}"
                 }
             }
         }
 
-        // 3️⃣ 버전 자동 증가
         stage('Increment Version') {
             steps {
                 script {
@@ -60,14 +54,11 @@ pipeline {
 
                     env.BACKEND_VERSION = newBackendVersion
                     env.FRONTEND_VERSION = newFrontendVersion
-
-                    echo "🔼 Backend version updated: ${newBackendVersion}"
-                    echo "🔼 Frontend version updated: ${newFrontendVersion}"
                 }
             }
         }
 
-        // 4️⃣ SonarQube - Backend
+        // 4️⃣ 여기가 수정된 부분입니다! (Backend)
         stage('SonarQube - Backend') {
             steps {
                 script {
@@ -78,7 +69,7 @@ pipeline {
                             ${scannerHome}/bin/sonar-scanner \
                               -Dsonar.projectKey=alphacar-backend \
                               -Dsonar.projectName=alphacar-backend \
-                              -Dsonar.sources=src \
+                              -Dsonar.sources=. \
                               -Dsonar.language=ts \
                               -Dsonar.host.url=${SONAR_URL} \
                               -Dsonar.login=alphacar-token \
@@ -90,7 +81,7 @@ pipeline {
             }
         }
 
-        // 5️⃣ SonarQube - Frontend
+        // 5️⃣ 여기도 수정되었습니다! (Frontend)
         stage('SonarQube - Frontend') {
             steps {
                 script {
@@ -101,7 +92,7 @@ pipeline {
                             ${scannerHome}/bin/sonar-scanner \
                               -Dsonar.projectKey=alphacar-frontend \
                               -Dsonar.projectName=alphacar-frontend \
-                              -Dsonar.sources=src \
+                              -Dsonar.sources=. \
                               -Dsonar.language=js \
                               -Dsonar.host.url=${SONAR_URL} \
                               -Dsonar.login=alphacar-token \
@@ -113,7 +104,6 @@ pipeline {
             }
         }
 
-        // 6️⃣ Docker Build
         stage('Build Docker Images') {
             steps {
                 sh '''
@@ -123,7 +113,6 @@ pipeline {
             }
         }
 
-        // 7️⃣ Trivy 보안 스캔
         stage('Trivy Security Scan') {
             steps {
                 sh '''
@@ -138,7 +127,6 @@ pipeline {
             }
         }
 
-        // 8️⃣ Harbor Push
         stage('Push to Harbor') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'harbor-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
@@ -162,4 +150,3 @@ pipeline {
         }
     }
 }
-
