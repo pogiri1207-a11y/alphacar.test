@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, HttpException, HttpStatus, Logger, NotFoundException } from '@nestjs/common';
 import { VehicleService } from './vehicle.service';
 
 // ✅ [복구] 다시 'vehicles'로 설정 (기존 규칙 준수)
@@ -25,8 +25,21 @@ export class VehicleController {
   // 3. [GET] 상세 조회 (견적용)
   @Get('detail')
   async getVehicleDetailData(@Query('trimId') trimId: string) {
-    if (!trimId) throw new HttpException('Trim ID 필요', HttpStatus.BAD_REQUEST);
-    return await this.vehicleService.findOne(trimId);
+    console.log(`\n================================================`);
+    console.log(`[Controller] 📨 상세 견적 요청 도착!`);
+    console.log(`   👉 받은 trimId: "${trimId}"`);
+    if (!trimId || trimId === 'undefined') {
+      console.error(`[Controller] ❌ trimId가 없거나 undefined입니다.`);
+      throw new NotFoundException('트림 ID가 유효하지 않습니다.');
+    }
+    try {
+      const result = await this.vehicleService.findOneByTrimId(trimId);
+      console.log(`[Controller] ✅ 데이터 조회 성공. 응답을 보냅니다.`);
+      return result;
+    } catch (error) {
+      console.error(`[Controller] 🚨 서비스 로직 에러:`, error.message);
+      throw error;
+    }
   }
 
   // 4. [GET] 전체 조회

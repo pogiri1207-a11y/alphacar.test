@@ -5,7 +5,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
 // [수정 1] 경로 변경: 공통 스키마 가져오기
-import { Vehicle, VehicleDocument } from '../../schemas/vehicle.schema';
+import { Vehicle, VehicleDocument } from './schemas/vehicle.schema';
 import { Manufacturer, ManufacturerDocument } from './manufacturer.schema';
 
 @Injectable()

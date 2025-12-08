@@ -1,6 +1,6 @@
 // backend/main/src/app.module.ts
 
-import { Module, NestModule, MiddlewareConsumer, Logger } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer, Logger, RequestMethod } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
@@ -8,14 +8,18 @@ import { AppService } from './app.service';
 
 import { RecentViewController } from './recent-view.controller';
 
-// [수정 1] 경로 변경: ./vehicle.schema -> ../../schemas/vehicle.schema
-import { Vehicle, VehicleSchema } from '../../schemas/vehicle.schema';
+// [수정 1] 경로 변경: ./vehicle.schema -> ../schemas/vehicle.schema
+import { Vehicle, VehicleSchema } from './schemas/vehicle.schema';
 // Manufacturer는 아직 공통으로 안 뺐다면 그대로 유지, 뺐다면 경로 수정 필요
 import { Manufacturer, ManufacturerSchema } from './manufacturer.schema';
 
 import { RedisModule } from './redis/redis.module';
 import { VehicleController } from './vehicle.controller';
 import { VehicleService } from './vehicle.service';
+
+import { SalesModule } from './sales/sales.module';
+
+import { FavoritesModule } from './favorites/favorites.module';
 
 @Module({
   imports: [
@@ -32,6 +36,8 @@ import { VehicleService } from './vehicle.service';
       { name: Manufacturer.name, schema: ManufacturerSchema },
     ]),
     RedisModule,
+    SalesModule,
+    FavoritesModule,
   ],
   controllers: [AppController, VehicleController, RecentViewController],
   providers: [AppService, VehicleService],
@@ -43,9 +49,14 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply((req, res, next) => {
-        this.logger.log(`📨 [요청 도착] ${req.method} ${req.originalUrl}`);
+	console.log(`\n================================`);
+        console.log(`[1] 🚀 REQUEST RECEIVED`);
+        console.log(`Method: ${req.method}`);
+        console.log(`Original URL: ${req.originalUrl}`); // 사용자가 보낸 원본 URL
+        console.log(`Path: ${req.path}`);       // 실제 처리되는 경로
+        console.log(`================================\n`);
         next();
       })
-      .forRoutes('*');
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
   }
 }

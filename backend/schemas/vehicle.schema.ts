@@ -1,12 +1,14 @@
+// src/schemas/vehicle.schema.ts
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 
 // ---------------------------------------------------------------
-// 1. 하위 스키마 정의 (데이터 구조가 중첩되어 있어 먼저 정의합니다)
+// 1. 하위 스키마 정의
 // ---------------------------------------------------------------
 
 // [하위] 옵션 정보 (trims -> options)
-@Schema({ _id: false })
+@Schema() // 👈 [수정됨] { _id: false } 삭제 -> 이제 자동으로 _id가 생성됩니다.
 export class VehicleOption {
   @Prop({ type: MongooseSchema.Types.Mixed })
   option_name: any;
@@ -23,7 +25,7 @@ export class VehicleOption {
 const VehicleOptionSchema = SchemaFactory.createForClass(VehicleOption);
 
 // [하위] 트림 정보 (trims)
-@Schema({ _id: false })
+@Schema() // 👈 [수정됨] { _id: false } 삭제 -> 이제 자동으로 _id가 생성됩니다.
 export class VehicleTrim {
   @Prop()
   trim_name: string;
@@ -42,7 +44,10 @@ export class VehicleTrim {
 }
 const VehicleTrimSchema = SchemaFactory.createForClass(VehicleTrim);
 
-// [하위] 리뷰 평점 상세 (review -> rating_breakdown)
+// ... (이하 RatingBreakdown, VehicleReview 등 다른 스키마는 _id: false 유지해도 무방함) ...
+// ... (ColorImage, StandardImage 등도 유지) ...
+
+// [하위] 리뷰 평점 상세
 @Schema({ _id: false })
 export class RatingBreakdown {
   @Prop() comfort: number;
@@ -54,30 +59,19 @@ export class RatingBreakdown {
 }
 const RatingBreakdownSchema = SchemaFactory.createForClass(RatingBreakdown);
 
-// [하위] 리뷰 정보 (review)
+// [하위] 리뷰 정보
 @Schema({ _id: false })
 export class VehicleReview {
-  @Prop()
-  review_id: string;
-
-  @Prop()
-  content: string;
-
-  @Prop()
-  published_date: string;
-
-  @Prop()
-  like_count: number;
-
-  @Prop()
-  overall_rating: number;
-
-  @Prop({ type: RatingBreakdownSchema })
-  rating_breakdown: RatingBreakdown;
+  @Prop() review_id: string;
+  @Prop() content: string;
+  @Prop() published_date: string;
+  @Prop() like_count: number;
+  @Prop() overall_rating: number;
+  @Prop({ type: RatingBreakdownSchema }) rating_breakdown: RatingBreakdown;
 }
 const VehicleReviewSchema = SchemaFactory.createForClass(VehicleReview);
 
-// [하위] 색상 이미지 (color_images)
+// [하위] 색상 이미지
 @Schema({ _id: false })
 export class ColorImage {
   @Prop({ type: MongooseSchema.Types.Mixed }) color_name: any;
@@ -86,7 +80,7 @@ export class ColorImage {
 }
 const ColorImageSchema = SchemaFactory.createForClass(ColorImage);
 
-// [하위] 일반 이미지 (exterior_images, interior_images 공용)
+// [하위] 일반 이미지
 @Schema({ _id: false })
 export class StandardImage {
   @Prop({ type: MongooseSchema.Types.Mixed }) url: any;
@@ -94,68 +88,62 @@ export class StandardImage {
 }
 const StandardImageSchema = SchemaFactory.createForClass(StandardImage);
 
-
 // ---------------------------------------------------------------
 // 2. 메인 스키마 정의 (danawa_vehicle_data 컬렉션)
 // ---------------------------------------------------------------
 
 export type VehicleDocument = Vehicle & Document;
 
-// collection 이름을 명세서에 맞게 'danawa_vehicle_data'로 고정
-@Schema({ 
-  collection: 'danawa_vehicle_data', 
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } 
+@Schema({
+  collection: 'danawa_vehicle_data',
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 })
 export class Vehicle {
-  // MongoDB _id
   @Prop({ type: Types.ObjectId })
   _id: Types.ObjectId;
 
-  // --- 필수 필드 ---
   @Prop({ required: true })
-  model_id: string; 
-
-  @Prop({ required: true })
-  lineup_id: string; 
+  model_id: string;
 
   @Prop({ required: true })
-  vehicle_name: string; 
+  lineup_id: string;
 
-  // --- 선택 필드 ---
-  @Prop()
-  vehicle_name_full: string; 
-
-  @Prop()
-  brand_name: string; 
+  @Prop({ required: true })
+  vehicle_name: string;
 
   @Prop()
-  vehicle_type: string; 
+  vehicle_name_full: string;
 
   @Prop()
-  base_trim_name: string; 
+  brand_name: string;
 
   @Prop()
-  model_year: string; 
+  vehicle_type: string;
 
   @Prop()
-  release_date: string; 
+  base_trim_name: string;
 
   @Prop()
-  fuel_type: string; 
+  model_year: string;
 
   @Prop()
-  logo_url: string; 
+  release_date: string;
 
   @Prop()
-  main_image: string; 
+  fuel_type: string;
 
   @Prop()
-  is_active: boolean; 
+  logo_url: string;
 
   @Prop()
-  last_updated: Date; 
+  main_image: string;
 
-  // --- 배열(Array) 필드들 ---
+  @Prop()
+  is_active: boolean;
+
+  @Prop()
+  last_updated: Date;
+
   @Prop({ type: [VehicleTrimSchema], default: [] })
   trims: VehicleTrim[];
 

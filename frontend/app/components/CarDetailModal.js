@@ -1,6 +1,7 @@
+// app/components/CarDetailModal.js
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const formatPrice = (price) => {
@@ -10,87 +11,135 @@ const formatPrice = (price) => {
   return (numPrice / 10000).toLocaleString() + "만원";
 };
 
+// 💖 하트 아이콘 컴포넌트 (SVG)
+const HeartIcon = ({ filled }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    width="28"
+    height="28"
+    fill={filled ? "#ff4d4f" : "rgba(0,0,0,0.5)"} // 채워지면 빨강, 아니면 반투명 검정
+    stroke={filled ? "#ff4d4f" : "#ffffff"} // 테두리: 채워지면 빨강, 아니면 흰색
+    strokeWidth="2"
+    style={{ transition: "all 0.2s ease" }}
+  >
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+  </svg>
+);
+
 export default function CarDetailModal({ car, onClose }) {
   const router = useRouter();
 
-  // ✅ [수정 1] 데이터 필드 매핑 (DB 변경 대응)
-  // 백엔드에서 변환해서 보내주더라도, 만약 원본 DB 데이터가 그대로 넘어올 경우를 대비해 OR(||) 처리
-  const vehicleId = car._id || car.id; // MongoDB ObjectId가 _id일 확률이 높음
-  const carName = car.name || car.vehicle_name; // 기존 name 또는 새 DB의 vehicle_name
-  const brandName = car.manufacturer || car.brand_name; // 기존 manufacturer 또는 새 DB의 brand_name
-  const imageUrl = car.imageUrl || car.main_image; // 기존 imageUrl 또는 새 DB의 main_image
-  
-  // 가격: minPrice가 없으면 trims 배열의 첫 번째 가격을 가져오거나 price 필드 사용
+  // 🔹 찜 상태 관리 state
+  const [isLiked, setIsLiked] = useState(false);
+  const [userId, setUserId] = useState(null);
+
+  // 데이터 필드 매핑
+  const vehicleId = car._id || car.id;
+  const carName = car.name || car.vehicle_name;
+  const brandName = car.manufacturer || car.brand_name;
+  const imageUrl = car.imageUrl || car.main_image;
+
   const displayPrice = car.minPrice || (car.trims && car.trims[0]?.price) || car.base_price || car.price;
 
-  // ✅ [수정 2] 모달 열릴 때 조회수 기록 (백엔드 API 주소 일치시킴)
   useEffect(() => {
     if (!car) return;
 
-    const userId = localStorage.getItem("user_social_id") || localStorage.getItem("alphacar_user_id");
+    // 유저 ID 확보
+    const storedUserId = localStorage.getItem("user_social_id") || localStorage.getItem("alphacar_user_id");
+    setUserId(storedUserId);
 
-    if (userId && vehicleId) {
-      // 🚨 기존 '/api/history' -> 수정된 백엔드 '/api/log-view/:id' 로 변경
+    if (storedUserId && vehicleId) {
+      // 1. 조회수 기록
       fetch(`/api/log-view/${vehicleId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId: storedUserId })
       })
       .then((res) => {
         if (res.ok) {
-          // 성공 시 이벤트 발생 (사이드바 갱신용)
           window.dispatchEvent(new Event("vehicleViewed"));
           console.log(`[History] 차량 조회 기록됨: ${vehicleId}`);
-        } else {
-            console.warn("[History] 기록 실패: API 응답 오류");
         }
       })
       .catch((err) => console.error("히스토리 저장 실패:", err));
+
+      // 2. 찜 상태 확인
+      fetch(`/api/favorites/status?userId=${storedUserId}&vehicleId=${vehicleId}`)
+        .then(res => res.json())
+        .then(data => setIsLiked(data.isLiked))
+        .catch(err => console.error("찜 상태 확인 실패:", err));
     }
-  }, []); // car가 바뀌면 다시 실행되어야 하므로 빈 배열보다는 vehicleId 의존성이 나을 수 있으나, 모달이므로 [] 유지 가능
+  }, []);
+
+  // 하트 클릭 핸들러
+  const handleToggleLike = async (e) => {
+    e.stopPropagation(); // 모달 닫힘 방지
+    if (!userId) {
+      alert("로그인이 필요한 서비스입니다.");
+      return;
+    }
+
+    // 낙관적 업데이트
+    const prevLiked = isLiked;
+    setIsLiked(!prevLiked);
+
+    try {
+      const res = await fetch('/api/favorites/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, vehicleId })
+      });
+
+      if (!res.ok) {
+        throw new Error("API 오류");
+      }
+
+      const result = await res.json();
+      console.log("찜 토글 결과:", result.status);
+    } catch (err) {
+      console.error("찜하기 실패:", err);
+      setIsLiked(prevLiked); // 실패 시 원복
+      alert("오류가 발생했습니다. 다시 시도해주세요.");
+    }
+  };
 
   if (!car) return null;
 
-  // 3. 견적 페이지 이동 처리 함수
+  // 🔹 [수정됨] 견적 페이지 이동 처리 함수 (undefined 오류 방지 로직 추가)
   const handleGoToQuoteResult = async () => {
     if (!vehicleId) {
-      console.error("차량 ID 정보가 누락되었습니다.");
       alert("차량 ID 정보가 없어 이동할 수 없습니다.");
       return;
     }
 
     try {
-      // 트림 정보 가져오기 (만약 car 객체 안에 이미 trims가 있다면 fetch 안해도 됨)
-      // 하지만 확실하게 하기 위해 fetch 유지. 단, 백엔드 경로 확인 필요.
+      // 트림 정보 가져오기 시도
       const res = await fetch(`/api/vehicles/trims?modelId=${vehicleId}`);
+      
+      let targetTrimId = null;
 
-      if (!res.ok) {
-        throw new Error("트림 정보를 가져오는데 실패했습니다.");
+      if (res.ok) {
+        const trims = await res.json();
+        if (Array.isArray(trims) && trims.length > 0) {
+          // 트림 ID 우선 사용
+          targetTrimId = trims[0]._id || trims[0].trim_id;
+        }
       }
 
-      const trims = await res.json();
-
-      if (Array.isArray(trims) && trims.length > 0) {
-        // 첫 번째 트림 ID 추출 (새 DB 구조에서는 trims가 배열로 존재)
-        // 만약 trims 안에 _id가 없다면 객체 구조 확인 필요. 보통은 있음.
-        const targetTrimId = trims[0]._id || trims[0].trim_id;
-
-        console.log(`차량 ID(${vehicleId}) -> 트림 ID(${targetTrimId}) 변환 성공`);
-
-        router.push(`/quote/personal/result?trimId=${targetTrimId}`);
-      } else {
-        alert("해당 차량의 트림 정보가 없어 견적을 낼 수 없습니다.");
+      // 만약 트림 ID를 못 찾았다면, 차량 ID(vehicleId)를 대체값으로 사용 (안전장치)
+      if (!targetTrimId) {
+        console.warn("트림 ID를 찾을 수 없어 차량 ID로 대체합니다.");
+        targetTrimId = vehicleId;
       }
+
+      console.log(`이동: vehicleId(${vehicleId}) -> trimId(${targetTrimId})`);
+      router.push(`/quote/personal/result?trimId=${targetTrimId}`);
 
     } catch (error) {
       console.error("이동 중 오류 발생:", error);
-      // 만약 API 실패해도 car 객체 안에 trims가 있다면 그걸로 시도해볼 수 있음 (선택사항)
-      if (car.trims && car.trims.length > 0) {
-          const fallbackTrimId = car.trims[0]._id || car.trims[0].trim_id;
-          router.push(`/quote/personal/result?trimId=${fallbackTrimId}`);
-      } else {
-          alert("상세 페이지로 이동하는 중 오류가 발생했습니다.");
-      }
+      // API 에러 발생 시에도 차량 ID로 강제 이동 시도
+      router.push(`/quote/personal/result?trimId=${vehicleId}`);
     }
   };
 
@@ -123,7 +172,6 @@ export default function CarDetailModal({ car, onClose }) {
         </button>
 
         <div style={{ textAlign: "center" }}>
-          {/* 1. 제조사 및 차량명 (수정된 변수 사용) */}
           <h2 style={{ fontSize: "22px", fontWeight: "bold", marginBottom: "5px", color: "#333" }}>
             {carName}
           </h2>
@@ -131,8 +179,7 @@ export default function CarDetailModal({ car, onClose }) {
             {brandName}
           </p>
 
-          {/* 2. 차량 이미지 (수정된 변수 사용) */}
-          <div style={{ margin: "20px 0", height: "200px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ margin: "20px 0", height: "200px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -144,9 +191,31 @@ export default function CarDetailModal({ car, onClose }) {
                 이미지 준비중
               </div>
             )}
+            
+            {/* 하트 버튼 */}
+            <button
+              onClick={handleToggleLike}
+              style={{
+                position: "absolute",
+                bottom: "10px",
+                right: "10px",
+                background: "rgba(255, 255, 255, 0.8)",
+                border: "none",
+                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                zIndex: 10
+              }}
+            >
+              <HeartIcon filled={isLiked} />
+            </button>
           </div>
 
-          {/* 3. 가격 정보 (수정된 변수 사용) */}
           <div style={{ marginTop: "20px", paddingTop: "20px", borderTop: "1px solid #eee" }}>
             <p style={{ fontSize: "14px", color: "#888", marginBottom: "5px" }}>예상 구매 가격</p>
             <p style={{ fontSize: "24px", fontWeight: "bold", color: "#0070f3" }}>
@@ -154,7 +223,6 @@ export default function CarDetailModal({ car, onClose }) {
             </p>
           </div>
 
-          {/* 4. 견적 버튼 */}
           <button
             style={{
               marginTop: "25px", width: "100%", padding: "15px 0",

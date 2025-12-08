@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, InternalServerErrorException, Logger } f
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
-import { Vehicle, VehicleDocument } from '../../schemas/vehicle.schema';
+import { Vehicle, VehicleDocument } from '@schemas/vehicle.schema';
 import { Manufacturer, ManufacturerDocument } from './schemas/manufacturer.schema';
 
 @Injectable()
