@@ -4,16 +4,17 @@ ARG APP_NAME
 
 WORKDIR /app
 
-# 모든 파일 복사 (이때 /app/aichat/package.json 도 복사됨)
+# 모든 파일 복사
 COPY . .
 
-# 글로벌 툴 설치 (Nest CLI 및 타입 오류 방지용 타입 정의)
+# 글로벌 툴 설치
 RUN npm install -g @nestjs/cli @types/node
 
-# --- CRITICAL MSA BUILD LOGIC (핵심 수정) ---
-# 1. 해당 앱 폴더로 이동하여
-# 2. 해당 앱의 package.json에 명시된 의존성을 설치하고
-# 3. 빌드를 실행합니다.
+# 👇👇👇 [핵심 수정] schemas 폴더가 있다면, 앱의 src 폴더 안으로 복사해라! 👇👇👇
+# (main 서비스가 schemas를 찾을 수 있게 해주는 마법의 주문입니다)
+RUN [ -d "schemas" ] && cp -r schemas ${APP_NAME}/src/ || true
+
+# --- MSA 빌드 실행 ---
 RUN cd ${APP_NAME} && \
     npm install && \
     nest build
@@ -24,12 +25,11 @@ ARG APP_NAME
 
 WORKDIR /app
 
-# [핵심 수정] 런타임에 필요한 파일만 개별 앱 폴더에서 복사
-# 1. 컴파일된 빌드 결과물 복사 (build output: /app/aichat/dist)
+# 런타임 파일 복사
 COPY --from=builder /app/${APP_NAME}/dist ./dist
-
-# 2. 프로덕션 의존성 설치를 위해 해당 앱의 package.json 복사
 COPY --from=builder /app/${APP_NAME}/package.json ./
+
+# 프로덕션 의존성 설치
 RUN npm install --production
 
 EXPOSE 3000-4000
