@@ -4,30 +4,33 @@ ARG APP_NAME
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
-RUN npm install -g @nestjs/cli
-
-# 소스 코드 복사
+# 모든 파일 복사 (이때 /app/aichat/package.json 도 복사됨)
 COPY . .
 
-# 1. 각 앱이 상위 node_modules를 찾도록 심볼릭 링크를 생성
-RUN ln -s /app/node_modules /app/${APP_NAME}/node_modules
+# 글로벌 툴 설치 (Nest CLI 및 타입 오류 방지용 타입 정의)
+RUN npm install -g @nestjs/cli @types/node
 
-# [제거됨] RUN npm install -g @types/node 명령어 제거! (모듈 경로 혼란 방지)
+# --- CRITICAL MSA BUILD LOGIC (핵심 수정) ---
+# 1. 해당 앱 폴더로 이동하여
+# 2. 해당 앱의 package.json에 명시된 의존성을 설치하고
+# 3. 빌드를 실행합니다.
+RUN cd ${APP_NAME} && \
+    npm install && \
+    nest build
 
-# 앱 폴더로 이동 후 빌드
-RUN cd ${APP_NAME} && nest build
-
-# 2. 실행 단계
+# 2. 실행 단계 (최종 이미지)
 FROM node:20-alpine
 ARG APP_NAME
 
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
 
+# [핵심 수정] 런타임에 필요한 파일만 개별 앱 폴더에서 복사
+# 1. 컴파일된 빌드 결과물 복사 (build output: /app/aichat/dist)
 COPY --from=builder /app/${APP_NAME}/dist ./dist
+
+# 2. 프로덕션 의존성 설치를 위해 해당 앱의 package.json 복사
+COPY --from=builder /app/${APP_NAME}/package.json ./
+RUN npm install --production
 
 EXPOSE 3000-4000
 CMD ["node", "dist/main"]
