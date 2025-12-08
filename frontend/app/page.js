@@ -556,3 +556,4 @@ const bannerCarouselStyles = {
   dot: { height: "8px", borderRadius: "999px", backgroundColor: "#555", cursor: "pointer", transition: "all 0.3s" },
 };
 
+
