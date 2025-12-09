@@ -385,7 +385,7 @@ export default function GlobalHeader() {
                   titleHref="/news"
                   items={[
                     { label: "핫이슈", href: "/news/hot" },
-                    { label: "내차와의 데이트", href: "/news/data" },  // ✅ 수정 적용
+                    { label: "내차와의 데이트!", href: "/news/data" },  // ✅ 수정 적용
                     { label: "시승기", href: "/news/review" },
                     { label: "시승신청하기", href: "/news/test-drive" },
                   ]}
