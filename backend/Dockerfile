@@ -33,4 +33,5 @@ COPY --from=builder /app/${APP_NAME}/package.json ./
 RUN npm install --production
 
 EXPOSE 3000-4000
-CMD ["node", "dist/main"]
+#CMD ["node", "dist/main"]
+CMD ["sh", "-c", "node $(find dist -name main.js | head -n 1)"]
