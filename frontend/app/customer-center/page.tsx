@@ -1,6 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState, CSSProperties } from "react";
+
+// ✅ [핵심] InfoCard의 Props 타입 정의 (actionLabel, onAction을 Optional로 설정)
+interface InfoCardProps {
+  title: string;
+  subtitle: string;
+  iconSrc: string;
+  actionLabel?: string;      // 👈 ?를 붙여서 있어도 되고 없어도 되게 함
+  onAction?: () => void;     // 👈 ?를 붙여서 있어도 되고 없어도 되게 함
+  children: React.ReactNode;
+}
 
 export default function CustomerCenterPage() {
   const faqItems = useMemo(
@@ -65,9 +75,9 @@ export default function CustomerCenterPage() {
     []
   );
 
-  const [openedIds, setOpenedIds] = useState(() => new Set());
+  const [openedIds, setOpenedIds] = useState<Set<number>>(() => new Set());
 
-  const toggleItem = (id) => {
+  const toggleItem = (id: number) => {
     setOpenedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -98,6 +108,7 @@ export default function CustomerCenterPage() {
           marginBottom: "24px",
         }}
       >
+        {/* actionLabel, onAction이 없어도 타입 에러가 발생하지 않음 */}
         <InfoCard title="전화문의" subtitle="평일 09:00 ~ 18:00" iconSrc="/icons/phone.svg">
           <div style={{ fontSize: "32px", fontWeight: 800, letterSpacing: "1px", color: "#111" }}>1588-0000</div>
           <p style={{ marginTop: "8px", fontSize: "13px", color: "#666", lineHeight: 1.6 }}>
@@ -210,7 +221,8 @@ export default function CustomerCenterPage() {
   );
 }
 
-function InfoCard({ title, subtitle, iconSrc, actionLabel, onAction, children }) {
+// ✅ InfoCard 컴포넌트에 타입 적용
+function InfoCard({ title, subtitle, iconSrc, actionLabel, onAction, children }: InfoCardProps) {
   return (
     <div
       style={{
@@ -233,26 +245,26 @@ function InfoCard({ title, subtitle, iconSrc, actionLabel, onAction, children })
         <div style={{ fontSize: "13px", color: "#666" }}>{subtitle}</div>
         {children}
         {actionLabel && onAction && (
-            <button
-              type="button"
-              onClick={onAction}
-              style={{
-                marginTop: "4px",
-                alignSelf: "flex-start",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "10px 14px",
-                borderRadius: "10px",
-                border: "1px solid #0F62FE",
-                backgroundColor: "#0F62FE",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: "13px",
-                cursor: "pointer",
-                boxShadow: "0 8px 16px rgba(15,98,254,0.18)",
-              }}
-            >
+          <button
+            type="button"
+            onClick={onAction}
+            style={{
+              marginTop: "4px",
+              alignSelf: "flex-start",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              border: "1px solid #0F62FE",
+              backgroundColor: "#0F62FE",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: "13px",
+              cursor: "pointer",
+              boxShadow: "0 8px 16px rgba(15,98,254,0.18)",
+            }}
+          >
             {actionLabel}
             <span aria-hidden>→</span>
           </button>
@@ -262,7 +274,8 @@ function InfoCard({ title, subtitle, iconSrc, actionLabel, onAction, children })
   );
 }
 
-const answerListStyle = {
+// ✅ 스타일 객체에 CSSProperties 타입 적용
+const answerListStyle: CSSProperties = {
   margin: "6px 0 0",
   paddingLeft: "18px",
   display: "grid",

@@ -15,6 +15,9 @@ export type MainData = {
   searchBar?: { isShow: boolean; placeholder: string; };
   banners: { id: number; text: string; color: string }[];
   shortcuts: string[];
+  carList?: any[];
+  cars?: any[];
+  [key: string]: any; // 그 외 다른 속성이 들어와도 에러 나지 않게 허용
 };
 
 export async function fetchMainData(brand?: string): Promise<MainData> {
@@ -77,7 +80,7 @@ export async function fetchDriveCourseDetail(id: number | string): Promise<Drive
 // --------------------
 // 4. 커뮤니티 (Community Service -> Port 3005)
 // --------------------
-export type CommunityPost = { id: number; category: string; title: string; content: string; author: string; date: string; views: number; };
+export type CommunityPost = { id: number; category: string; title: string; content: string; author: string; userId?: string | number; date: string; views: number; };
 export type CommunityListResponse = { message: string; posts: CommunityPost[]; };
 export type CommunityWriteResponse = { success: boolean; message: string; };
 

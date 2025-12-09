@@ -1,8 +1,8 @@
-// app/page.js
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, CSSProperties } from "react";
 import { useRouter } from "next/navigation";
+// @ts-ignore
 import { fetchMainData, fetchBrandsWithLogo } from "../lib/api";
 import YouTubeSection from "./components/YouTubeSection";
 import CarDetailModal from "./components/CarDetailModal";
@@ -21,7 +21,7 @@ const bannerItems = [
 // 브랜드 목록은 API에서 가져옴
 
 // 💖 하트 아이콘 컴포넌트
-const HeartIcon = ({ filled }) => (
+const HeartIcon = ({ filled }: { filled: boolean }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -42,24 +42,24 @@ export default function HomePage() {
   const [bannerIndex, setBannerIndex] = useState(0);
   const safeBannerIndex = bannerIndex;
 
-  const [carList, setCarList] = useState([]);
+  const [carList, setCarList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [domesticTop5, setDomesticTop5] = useState([]);
-  const [foreignTop5, setForeignTop5] = useState([]);
+  const [domesticTop5, setDomesticTop5] = useState<any[]>([]);
+  const [foreignTop5, setForeignTop5] = useState<any[]>([]);
 
   const [selectedBrand, setSelectedBrand] = useState("전체");
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 12;
-  const [brands, setBrands] = useState([]); // 브랜드 목록 상태 추가
+  const [brands, setBrands] = useState<any[]>([]); // 브랜드 목록 상태 추가
 
-  const [selectedCar, setSelectedCar] = useState(null);
+  const [selectedCar, setSelectedCar] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const [likedVehicleIds, setLikedVehicleIds] = useState(new Set());
+  const [likedVehicleIds, setLikedVehicleIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let storedUserId = localStorage.getItem("user_social_id") || localStorage.getItem("alphacar_user_id");
@@ -70,7 +70,7 @@ export default function HomePage() {
     setUserId(storedUserId);
   }, []);
 
-  const fetchMyFavorites = useCallback(async (uid) => {
+  const fetchMyFavorites = useCallback(async (uid: string) => {
     if (!uid) return;
     try {
       console.log("💖 [fetchMyFavorites] 찜 목록 조회 시작:", uid);
@@ -79,13 +79,13 @@ export default function HomePage() {
         const data = await res.json();
         console.log("💖 [fetchMyFavorites] 찜 목록 응답:", data);
         // vehicleId가 populate된 경우 lineup_id를 우선 사용, 없으면 _id 사용
-        const ids = new Set(data.map(item => {
+        const ids = new Set<string>(data.map((item: any) => {
           if (!item.vehicleId) return null;
           // lineup_id가 있으면 lineup_id 사용 (문자열), 없으면 _id 사용 (ObjectId 문자열)
           const id = item.vehicleId.lineup_id || (item.vehicleId._id ? String(item.vehicleId._id) : null);
           console.log("💖 [fetchMyFavorites] 추출된 ID:", id, "from vehicleId:", item.vehicleId);
           return id;
-        }).filter(id => id));
+        }).filter((id: any) => id) as string[]);
         console.log("💖 [fetchMyFavorites] 최종 찜 ID 목록:", Array.from(ids));
         setLikedVehicleIds(ids);
       } else {
@@ -113,7 +113,7 @@ export default function HomePage() {
         const res = await fetch(API_RANKING_URL);
         if (!res.ok) throw new Error("Load Fail");
         const data = await res.json();
-        const formatRanking = (list) => {
+        const formatRanking = (list: any[]) => {
           if (!list || !Array.isArray(list)) return [];
           return list.slice(0, 5).map((item) => ({
             rank: item.rank,
@@ -134,16 +134,15 @@ export default function HomePage() {
   // 브랜드 목록 가져오기 (로고 포함)
   useEffect(() => {
     fetchBrandsWithLogo()
-      .then((brandList) => {
+      .then((brandList: any[]) => {
         // "전체" 옵션을 맨 앞에 추가
         const allBrand = { name: "전체", logo_url: "" };
-        const sortedBrands = [allBrand, ...brandList];
         
         // 브랜드 정렬: "전체" -> "현대", "기아", "제네시스", "쉐보레" -> 나머지 한글 순서
         const priorityBrands = ["현대", "기아", "제네시스", "쉐보레"];
-        const priorityList = [];
-        const normalList = [];
-        
+        const priorityList: any[] = [];
+        const normalList: any[] = [];
+
         brandList.forEach((brand) => {
           if (priorityBrands.includes(brand.name)) {
             priorityList.push(brand);
@@ -151,22 +150,22 @@ export default function HomePage() {
             normalList.push(brand);
           }
         });
-        
+
         // 우선순위 브랜드는 지정된 순서대로 정렬
         priorityList.sort((a, b) => {
           const indexA = priorityBrands.indexOf(a.name);
           const indexB = priorityBrands.indexOf(b.name);
           return indexA - indexB;
         });
-        
+
         // 일반 브랜드는 한글 순서로 정렬
         normalList.sort((a, b) => {
           return a.name.localeCompare(b.name, 'ko');
         });
-        
+
         setBrands([allBrand, ...priorityList, ...normalList]);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error("브랜드 목록 로딩 실패:", err);
         // 실패 시 기본값 설정
         setBrands([{ name: "전체", logo_url: "" }]);
@@ -176,15 +175,15 @@ export default function HomePage() {
   useEffect(() => {
     setLoading(true);
     fetchMainData(selectedBrand === "전체" ? undefined : selectedBrand)
-      .then((data) => {
-        let cars = [];
+      .then((data: any) => {
+        let cars: any[] = [];
         if (data.carList && Array.isArray(data.carList)) cars = data.carList;
         else if (data.cars && Array.isArray(data.cars)) cars = data.cars;
         else if (Array.isArray(data)) cars = data;
         setCarList(cars);
         setLoading(false);
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error(err);
         setErrorMsg("데이터 로딩 실패");
         setLoading(false);
@@ -193,13 +192,13 @@ export default function HomePage() {
 
   useEffect(() => { setCurrentPage(1); }, [selectedBrand]);
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchText.trim()) return;
     router.push(`/search?keyword=${encodeURIComponent(searchText.trim())}`);
   };
 
-  const formatPrice = (minPrice, maxPrice) => {
+  const formatPrice = (minPrice: number, maxPrice: number) => {
     if (!minPrice && !maxPrice) return "가격 정보 없음";
     const min = minPrice ? (Number(minPrice) / 10000).toLocaleString() : "";
     const max = maxPrice ? (Number(maxPrice) / 10000).toLocaleString() : "";
@@ -216,13 +215,14 @@ export default function HomePage() {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedCars = filteredCars.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
-  const handleBannerClick = (item) => {
+  const handleBannerClick = (item: any) => {
     const target = item || bannerItems[safeBannerIndex];
     if (target.link) router.push(target.link);
   };
   const goPrevBanner = () => setBannerIndex((prev) => (prev - 1 + bannerItems.length) % bannerItems.length);
   const goNextBanner = () => setBannerIndex((prev) => (prev + 1) % bannerItems.length);
-  const getBannerPositionStyle = (idx) => {
+  
+  const getBannerPositionStyle = (idx: number): CSSProperties => {
     const len = bannerItems.length;
     let diff = idx - safeBannerIndex;
     if (diff > len / 2) diff -= len;
@@ -233,7 +233,7 @@ export default function HomePage() {
     return bannerCarouselStyles.hidden;
   };
 
-  const handleCarClick = (car) => {
+  const handleCarClick = (car: any) => {
     setSelectedCar(car);
     setIsModalOpen(true);
   };
@@ -244,7 +244,7 @@ export default function HomePage() {
     if (userId) fetchMyFavorites(userId);
   };
 
-  const handleHeartClick = async (e, car) => {
+  const handleHeartClick = async (e: React.MouseEvent, car: any) => {
     e.stopPropagation();
     if (!userId) {
       alert("로그인이 필요합니다.");
@@ -342,7 +342,7 @@ export default function HomePage() {
                 const brandName = typeof brand === 'string' ? brand : brand.name;
                 const logoUrl = typeof brand === 'object' ? brand.logo_url : '';
                 const isSelected = brandName === selectedBrand;
-                
+
                 return (
                   <button
                     key={brandName}
@@ -355,7 +355,7 @@ export default function HomePage() {
                         alt={brandName}
                         onError={(e) => {
                           // 이미지 로드 실패 시 숨김
-                          e.target.style.display = 'none';
+                          (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
                     )}
@@ -421,14 +421,14 @@ export default function HomePage() {
             const MAX_VISIBLE_PAGES = 10;
             let startPage = Math.max(1, currentPage - Math.floor(MAX_VISIBLE_PAGES / 2));
             let endPage = Math.min(totalPages, startPage + MAX_VISIBLE_PAGES - 1);
-            
+
             // 끝 페이지가 totalPages에 가까우면 시작 페이지를 조정
             if (endPage - startPage < MAX_VISIBLE_PAGES - 1) {
               startPage = Math.max(1, endPage - MAX_VISIBLE_PAGES + 1);
             }
-            
+
             const visiblePages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
-            
+
             return (
               <div className="pagination" style={{ marginTop: "24px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                 {/* 이전 페이지 화살표 */}
@@ -463,7 +463,7 @@ export default function HomePage() {
                 >
                   ‹
                 </button>
-                
+
                 {/* 페이지 번호 버튼들 */}
                 {visiblePages.map((page) => (
                   <button
@@ -496,7 +496,7 @@ export default function HomePage() {
                     {page}
                   </button>
                 ))}
-                
+
                 {/* 다음 페이지 화살표 */}
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
@@ -543,7 +543,8 @@ export default function HomePage() {
   );
 }
 
-const bannerCarouselStyles = {
+// ✅ [핵심] TypeScript에게 이 객체는 단순 문자열이 아니라 CSS 스타일 속성이라고 명시
+const bannerCarouselStyles: { [key: string]: CSSProperties } = {
   section: { position: "relative", width: "100%", height: "320px", marginTop: "30px", marginBottom: "20px" },
   cardBase: { position: "absolute", top: "50%", transform: "translateY(-50%)", width: "90%", maxWidth: "1450px", height: "100%", borderRadius: "24px", overflow: "hidden", boxShadow: "0 10px 25px rgba(0, 0, 0, 0.18)", backgroundColor: "#000", cursor: "pointer", transition: "all 0.5s ease" },
   center: { left: "50%", transform: "translate(-50%, -50%) scale(1)", zIndex: 3, opacity: 1, filter: "none" },

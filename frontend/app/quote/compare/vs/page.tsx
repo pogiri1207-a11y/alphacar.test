@@ -3,29 +3,81 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 
+// ✅ TypeScript 인터페이스 정의 (데이터 구조 명시)
+interface Option {
+  _id?: string;
+  id?: string;
+  name?: string;
+  option_name?: string;
+  price?: number;
+  option_price?: number;
+  [key: string]: any;
+}
+
+interface Trim {
+  _id?: string;
+  trim_id?: string;
+  trim_name?: string;
+  price?: number;
+  options?: Option[];
+  [key: string]: any;
+}
+
+interface CarData {
+  _id?: string;
+  id?: string;
+  manufacturer?: string;
+  brand_name?: string;
+  model_name?: string;
+  vehicle_name?: string;
+  name?: string;
+  trim_name?: string;
+  main_image?: string;
+  image_url?: string;
+  trims?: Trim[];
+  [key: string]: any;
+}
+
+// 가공된 차량 데이터 인터페이스
+interface ProcessedCar {
+  manufacturer: string;
+  model_name: string;
+  trim_name: string;
+  image: string;
+  basePrice: number;
+  selectedOptions: Option[];
+  optionTotal: number;
+  totalPrice: number;
+  discountPrice: number;
+  monthly: number;
+  [key: string]: any;
+}
+
 // 백엔드 API 주소
 const API_BASE = "/api";
 
 // [유틸] 견고한 HTTP 응답 처리 헬퍼 함수
-const handleApiResponse = async (res) => {
-  if (!res.ok) {
-    let errorData = {};
-    try {
-      errorData = await res.json();
-    } catch (e) {
-      errorData = { message: res.statusText || '서버 응답 오류', status: res.status };
-    }
-    throw new Error(errorData.message || `API 요청 실패 (Status: ${res.status})`);
-  }
-  return res.json();
+const handleApiResponse = async (res: Response) => {
+  if (!res.ok) {
+    // 🚨 [수정 포인트] errorData에 'any' 타입을 주어 'message' 속성 접근 허용
+    let errorData: any = {};
+    try {
+      errorData = await res.json();
+    } catch (e) {
+      errorData = { message: res.statusText || '서버 응답 오류', status: res.status };
+    }
+    throw new Error(errorData.message || `API 요청 실패 (Status: ${res.status})`);
+  }
+  return res.json();
 };
 
 function CompareVsContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // URL 파라미터 읽기
   const idsParam = searchParams.get("ids");
+  
   // 모든 차량의 옵션 파라미터 읽기 (opts1, opts2, opts3, opts4, opts5)
   const optsParams: string[] = [];
   for (let i = 1; i <= 5; i++) {
@@ -33,48 +85,47 @@ function CompareVsContent() {
     if (opts !== null) optsParams.push(opts);
   }
 
-  const [cars, setCars] = useState([]);
+  const [cars, setCars] = useState<CarData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 가격 포맷팅
-  const formatPrice = (price) => {
-    return Number(price).toLocaleString() + "원";
-  };
+  // 가격 포맷팅
+  const formatPrice = (price: number | string | undefined) => {
+    return Number(price || 0).toLocaleString() + "원";
+  };
 
-  useEffect(() => {
-    if (!idsParam) {
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    if (!idsParam) {
+      setLoading(false);
+      return;
+    }
 
-    const fetchCompareData = async () => {
-      try {
-        setLoading(true);
-        const baseUrl = "/api";
+    const fetchCompareData = async () => {
+      try {
+        setLoading(true);
+        const baseUrl = "/api";
 
-        // 백엔드에서 차량 정보(옵션 포함) 조회
-        // idsParam은 현재 trimId1,trimId2 형태로 되어있음.
-        const res = await fetch(`${baseUrl}/vehicles/compare-data?ids=${idsParam}`);
-        const data = await handleApiResponse(res);
+        // 백엔드에서 차량 정보(옵션 포함) 조회
+        const res = await fetch(`${baseUrl}/vehicles/compare-data?ids=${idsParam}`);
+        const data = await handleApiResponse(res);
 
-        setCars(data);
-      } catch (err) {
-        console.error("에러 발생:", err.message || err);
-      } finally {
-        setLoading(false);
-      }
-    };
+        setCars(data);
+      } catch (err: any) {
+        console.error("에러 발생:", err.message || err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    fetchCompareData();
-  }, [idsParam]);
+    fetchCompareData();
+  }, [idsParam]);
 
-  if (loading) {
-    return (
-      <main style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", padding: "100px", textAlign: "center" }}>
-        <p style={{ fontSize: "18px", fontWeight: "bold", color: "#555" }}>결과를 불러오는 중입니다...</p>
-      </main>
-    );
-  }
+  if (loading) {
+    return (
+      <main style={{ backgroundColor: "#f5f5f5", minHeight: "100vh", padding: "100px", textAlign: "center" }}>
+        <p style={{ fontSize: "18px", fontWeight: "bold", color: "#555" }}>결과를 불러오는 중입니다...</p>
+      </main>
+    );
+  }
 
   if (cars.length < 2) {
     return (
@@ -87,77 +138,77 @@ function CompareVsContent() {
 
   // --- 데이터 가공 로직 ---
 
-  // ✅ [핵심 수정 1] URL에서 모든 trimId/name 추출
-  const trimIds = idsParam ? idsParam.split(',').filter(id => id.trim() !== '') : []; 
+  // URL에서 모든 trimId/name 추출
+  const trimIds = idsParam ? idsParam.split(',').filter(id => id.trim() !== '') : [];
 
-  // ✅ [핵심 수정 2] 모든 차량의 선택된 옵션을 Set 배열로 변환
+  // 모든 차량의 선택된 옵션을 Set 배열로 변환
   const selectedOptsArray = optsParams.map(opts => new Set(opts ? opts.split(",").filter(id => id.trim() !== '') : []));
 
-  // ✅ [핵심 수정 3] 데이터 추출 및 병합 로직
-  const processCarData = (carData, selectedSet, originalTrimId) => {
-    // 1. 선택된 트림 찾기
-    let selectedTrim = null;
-    const trims = carData.trims || [];
+  // 데이터 추출 및 병합 로직
+  const processCarData = (carData: CarData, selectedSet: Set<string>, originalTrimId: string): ProcessedCar => {
+    // 1. 선택된 트림 찾기
+    let selectedTrim: Trim | undefined = undefined;
+    const trims = carData.trims || [];
 
-    if (trims.length > 0) {
-        const decodedTrimId = decodeURIComponent(originalTrimId);
-        
-        // A. 이름으로 정확히 일치하는 트림 찾기 (시그니처 A/T 등)
-        selectedTrim = trims.find(t => t.trim_name === decodedTrimId); 
+    if (trims.length > 0) {
+        const decodedTrimId = decodeURIComponent(originalTrimId);
+        
+        // A. 이름으로 정확히 일치하는 트림 찾기
+        selectedTrim = trims.find((t) => t.trim_name === decodedTrimId);
 
-        // B. ID로 찾기 (ObjectId)
-        if (!selectedTrim) {
-            selectedTrim = trims.find(t => t._id === originalTrimId || t.trim_id === originalTrimId);
-        }
-        
-        // C. Fallback: 여전히 못 찾았다면 첫 번째 트림을 기본값으로 사용
-        if (!selectedTrim) selectedTrim = trims[0];
-    }
+        // B. ID로 찾기
+        if (!selectedTrim) {
+            selectedTrim = trims.find((t) => t._id === originalTrimId || t.trim_id === originalTrimId);
+        }
+        
+        // C. Fallback
+        if (!selectedTrim) selectedTrim = trims[0];
+    }
 
     // 2. UI에 사용할 가격 및 옵션 추출
     const basePrice = Number(selectedTrim ? selectedTrim.price || 0 : 0);
     const allOptions = selectedTrim ? selectedTrim.options || [] : [];
-    
-    // 3. 옵션 매칭 및 합계 계산 (기존 로직 유지)
-    const selectedOptions = allOptions.filter((opt, index) => {
-        // 1. 진짜 ID(_id)가 있고, 선택 목록에 있는지 확인
-        if (opt._id && selectedSet.has(String(opt._id))) {
-            return true;
-        }
 
-        // 2. ID가 없어서 'opt-순서'로 넘어온 경우 확인 (Fallback)
-        const tempIndexId = `opt-${index}`;
-        if (selectedSet.has(tempIndexId)) {
-            return true;
-        }
+    // 3. 옵션 매칭 및 합계 계산
+    const selectedOptions = allOptions.filter((opt, index) => {
+        // 1. 진짜 ID(_id)가 있고, 선택 목록에 있는지 확인
+        if (opt._id && selectedSet.has(String(opt._id))) {
+            return true;
+        }
 
-        return false;
-    });
+        // 2. ID가 없어서 'opt-순서'로 넘어온 경우 확인 (Fallback)
+        const tempIndexId = `opt-${index}`;
+        if (selectedSet.has(tempIndexId)) {
+            return true;
+        }
 
-    // 옵션 가격 합계
-    const optionTotal = selectedOptions.reduce((sum, opt) => sum + (opt.price || opt.option_price || 0), 0);
-    const totalPrice = basePrice + optionTotal;
+        return false;
+    });
 
-    const discountPrice = Math.floor(totalPrice * 0.95);
-    const monthly = Math.floor(discountPrice / 60 / 10000);
+    // 옵션 가격 합계
+    const optionTotal = selectedOptions.reduce((sum, opt) => sum + (opt.price || opt.option_price || 0), 0);
+    const totalPrice = basePrice + optionTotal;
+
+    const discountPrice = Math.floor(totalPrice * 0.95);
+    const monthly = Math.floor(discountPrice / 60 / 10000);
 
     // 4. UI가 기대하는 flat 구조로 최종 병합
-    return {
-      ...carData, // Vehicle ID, Image, Brand Name 등 상위 정보 유지
-      manufacturer: carData.manufacturer || carData.brand_name || "제조사",
-      model_name: carData.model_name || carData.vehicle_name || "모델명",
-      trim_name: selectedTrim ? selectedTrim.trim_name : (carData.name || carData.trim_name || "트림"),
-      image: carData.main_image || carData.image_url || "/car/sample-left.png",
-      basePrice, // ✅ 추출된 트림 기본 가격
-      selectedOptions, // 필터링된 옵션 목록
-      optionTotal,
-      totalPrice,
-      discountPrice,
-      monthly,
-    };
-  };
+    return {
+      ...carData,
+      manufacturer: carData.manufacturer || carData.brand_name || "제조사",
+      model_name: carData.model_name || carData.vehicle_name || "모델명",
+      trim_name: selectedTrim ? (selectedTrim.trim_name || "트림") : (carData.name || carData.trim_name || "트림"),
+      image: carData.main_image || carData.image_url || "/car/sample-left.png",
+      basePrice,
+      selectedOptions,
+      optionTotal,
+      totalPrice,
+      discountPrice,
+      monthly,
+    };
+  };
 
-  // ✅ [핵심 수정 4] 모든 차량에 대해 processCarData 호출
+  // 모든 차량에 대해 processCarData 호출
   const processedCars = cars.map((carData, index) => {
     const trimId = trimIds[index] || '';
     const selectedOpts = selectedOptsArray[index] || new Set();
@@ -180,14 +231,14 @@ function CompareVsContent() {
     },
   ] : [];
 
-  // 비교 견적 저장 핸들러
-  const handleSaveCompareQuote = async () => {
-    const userSocialId = localStorage.getItem("user_social_id");
+  // 비교 견적 저장 핸들러
+  const handleSaveCompareQuote = async () => {
+    const userSocialId = localStorage.getItem("user_social_id");
 
-    if (!userSocialId) {
-      alert("로그인이 필요한 서비스입니다.");
-      return;
-    }
+    if (!userSocialId) {
+      alert("로그인이 필요한 서비스입니다.");
+      return;
+    }
 
     const payload = {
       userId: userSocialId,
@@ -203,25 +254,25 @@ function CompareVsContent() {
       }))
     };
 
-    try {
-      const baseUrl = "/api";
-      const res = await fetch(`${baseUrl}/estimate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    try {
+      const baseUrl = "/api";
+      const res = await fetch(`${baseUrl}/estimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-      if (res.ok) {
-        alert("비교 견적이 견적함에 저장되었습니다!");
-        router.push("/mypage/quotes");
-      } else {
-        alert("저장 실패");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("에러 발생: " + e.message);
-    }
-  };
+      if (res.ok) {
+        alert("비교 견적이 견적함에 저장되었습니다!");
+        router.push("/mypage/quotes");
+      } else {
+        alert("저장 실패");
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert("에러 발생: " + e.message);
+    }
+  };
 
   return (
     <main style={{ backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
@@ -343,12 +394,12 @@ function CompareVsContent() {
                 const priceDiff = car.totalPrice - basePrice;
                 const isHigher = priceDiff > 0;
                 const isLower = priceDiff < 0;
-                
+
                 return (
-                  <div key={idx} style={{ 
-                    backgroundColor: "#111", 
-                    borderRadius: "12px", 
-                    padding: "24px", 
+                  <div key={idx} style={{
+                    backgroundColor: "#111",
+                    borderRadius: "12px",
+                    padding: "24px",
                     textAlign: "center",
                     minHeight: "80px",
                     display: "flex",
@@ -363,22 +414,22 @@ function CompareVsContent() {
                       {formatPrice(car.totalPrice)}
                     </div>
                     {idx > 0 && priceDiff !== 0 && (
-                      <div style={{ 
-                        display: "flex", 
-                        alignItems: "center", 
+                      <div style={{
+                        display: "flex",
+                        alignItems: "center",
                         justifyContent: "center",
                         gap: "4px",
                         fontSize: "14px",
                         fontWeight: "600",
                         marginTop: "4px"
                       }}>
-                        <span style={{ 
+                        <span style={{
                           color: isHigher ? "#ff4444" : "#4a9eff",
                           fontSize: "12px"
                         }}>
                           {isHigher ? "▲" : "▼"}
                         </span>
-                        <span style={{ 
+                        <span style={{
                           color: isHigher ? "#ff4444" : "#4a9eff"
                         }}>
                           {formatPrice(Math.abs(priceDiff))}
@@ -413,37 +464,37 @@ function CompareVsContent() {
                       const priceDiff = value.val - baseVal;
                       const isHigher = priceDiff > 0;
                       const isLower = priceDiff < 0;
-                      
+
                       return (
-                        <div key={carIdx} style={{ 
-                          textAlign: "center", 
+                        <div key={carIdx} style={{
+                          textAlign: "center",
                           display: "flex",
                           flexDirection: "column",
                           alignItems: "center",
                           gap: "4px"
                         }}>
-                          <div style={{ 
-                            fontWeight: "700", 
-                            fontSize: "15px", 
+                          <div style={{
+                            fontWeight: "700",
+                            fontSize: "15px",
                             color: carIdx === 0 ? "#333" : (isHigher ? "#d32f2f" : isLower ? "#1976d2" : "#333")
                           }}>
                             {value.text}
                           </div>
                           {carIdx > 0 && priceDiff !== 0 && (
-                            <div style={{ 
-                              display: "flex", 
-                              alignItems: "center", 
+                            <div style={{
+                              display: "flex",
+                              alignItems: "center",
                               gap: "4px",
                               fontSize: "12px",
                               fontWeight: "600"
                             }}>
-                              <span style={{ 
+                              <span style={{
                                 color: isHigher ? "#ff4444" : "#4a9eff",
                                 fontSize: "10px"
                               }}>
                                 {isHigher ? "▲" : "▼"}
                               </span>
-                              <span style={{ 
+                              <span style={{
                                 color: isHigher ? "#ff4444" : "#4a9eff"
                               }}>
                                 {formatPrice(Math.abs(priceDiff))}
@@ -462,27 +513,27 @@ function CompareVsContent() {
             </div>
           </div>
 
-          {/* 하단 버튼 */}
-          <div style={{ marginTop: "30px" }}>
-            <button
-              style={{ width: "100%", padding: "16px", borderRadius: "12px", border: "none", background: "#111", color: "#fff", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }}
-              onClick={handleSaveCompareQuote}
-            >
-              견적 저장
-            </button>
-          </div>
+          {/* 하단 버튼 */}
+          <div style={{ marginTop: "30px" }}>
+            <button
+              style={{ width: "100%", padding: "16px", borderRadius: "12px", border: "none", background: "#111", color: "#fff", fontSize: "16px", fontWeight: "bold", cursor: "pointer" }}
+              onClick={handleSaveCompareQuote}
+            >
+              견적 저장
+            </button>
+          </div>
 
-        </div>
-        
-      </div>
-    </main>
-  );
+        </div>
+        
+      </div>
+    </main>
+  );
 }
 
 export default function CompareVsPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <CompareVsContent />
-    </Suspense>
-  );
+  return (
+    <Suspense fallback={<div style={{ padding: "100px", textAlign: "center" }}>결과를 불러오는 중...</div>}>
+      <CompareVsContent />
+    </Suspense>
+  );
 }

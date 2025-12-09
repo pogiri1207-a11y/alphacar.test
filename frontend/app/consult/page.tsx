@@ -1,8 +1,10 @@
 // app/consult/page.js
 "use client";
 
+import React, { CSSProperties, FormEvent } from "react";
+
 export default function ConsultPage() {
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     if (!form.checkValidity()) {
@@ -185,13 +187,13 @@ function fieldRow(label, required, control) {
   );
 }
 
-const labelStyle = {
+const labelStyle: CSSProperties = {
   fontSize: 13,
   fontWeight: 700,
   color: "#333",
 };
 
-const inputStyle = {
+const inputStyle: CSSProperties = {
   width: "100%",
   height: 42,
   borderRadius: 10,

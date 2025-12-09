@@ -1,7 +1,7 @@
 // app/community/[id]/page.js
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, CSSProperties } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { fetchCommunityPosts } from "@/lib/api";
 import { STATIC_NOTICES } from "../staticNotices";
@@ -10,7 +10,7 @@ const NOTICE_EXTEND_ID = "notice-extend-2025-12-01";
 const NOTICE_REFUND_ID = "notice-refund-2025-12-01";
 
 // 공통 표 스타일
-const tableStyle = {
+const tableStyle: CSSProperties = {
   width: "100%",
   borderCollapse: "collapse",
   marginTop: "24px",
