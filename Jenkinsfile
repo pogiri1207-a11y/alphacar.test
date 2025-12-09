@@ -8,7 +8,7 @@ pipeline {
         HARBOR_PROJECT = 'alphacar-project'
         FRONTEND_IMAGE = 'alphacar-frontend'
         NGINX_IMAGE = 'alphacar-nginx'
-        HAPROXY_IMAGE = 'alphacar-haproxy'
+        // HAProxy 이미지 변수 제거됨
         GIT_REPO = 'https://github.com/Alphacar-project/alphacar.git'
     }
 
@@ -22,10 +22,15 @@ pipeline {
         stage('Read Version') {
             steps {
                 script {
-                    def backendVersion = readFile('backend/version.txt').trim()
-                    def frontendVersion = readFile('frontend/version.txt').trim()
-                    env.BACKEND_VERSION = backendVersion
-                    env.FRONTEND_VERSION = frontendVersion
+                    def baseBackVer = readFile('backend/version.txt').trim()
+                    def baseFrontVer = readFile('frontend/version.txt').trim()
+                    
+                    // 버전에 젠킨스 빌드 번호를 붙여서 자동 증가 (예: 1.0.25)
+                    env.BACKEND_VERSION = "${baseBackVer}.${currentBuild.number}"
+                    env.FRONTEND_VERSION = "${baseFrontVer}.${currentBuild.number}"
+                    
+                    echo "🚀 New Backend Version: ${env.BACKEND_VERSION}"
+                    echo "🚀 New Frontend Version: ${env.FRONTEND_VERSION}"
                 }
             }
         }
@@ -56,9 +61,8 @@ pipeline {
                     // 2. Frontend (1개)
                     sh "docker build -f frontend/Dockerfile -t ${HARBOR_URL}/${HARBOR_PROJECT}/${FRONTEND_IMAGE}:${FRONTEND_VERSION} frontend/"
 
-                    // 3. Nginx & HAProxy
+                    // 3. Nginx (HAProxy 빌드 제거됨)
                     sh "docker build -f nginx.Dockerfile -t ${HARBOR_URL}/${HARBOR_PROJECT}/${NGINX_IMAGE}:${BACKEND_VERSION} ."
-                    sh "docker build -f haproxy.Dockerfile -t ${HARBOR_URL}/${HARBOR_PROJECT}/${HAPROXY_IMAGE}:${BACKEND_VERSION} ."
                 }
             }
         }
@@ -91,7 +95,7 @@ pipeline {
                         }
                         sh "docker push ${HARBOR_URL}/${HARBOR_PROJECT}/${FRONTEND_IMAGE}:${FRONTEND_VERSION}"
                         sh "docker push ${HARBOR_URL}/${HARBOR_PROJECT}/${NGINX_IMAGE}:${BACKEND_VERSION}"
-                        sh "docker push ${HARBOR_URL}/${HARBOR_PROJECT}/${HAPROXY_IMAGE}:${BACKEND_VERSION}"
+                        // HAProxy Push 제거됨
 
                         sh "docker logout ${HARBOR_URL}"
                     }
@@ -102,20 +106,21 @@ pipeline {
         stage('Deploy to Server') {
             steps {
                 sshagent(credentials: ['ssh-server']) {
-                    // ALPHACAR: Secret File Credential ID (Kind: Secret file)
                     withCredentials([file(credentialsId: 'ALPHACAR', variable: 'ENV_FILE_PATH'),
                                      usernamePassword(credentialsId: 'harbor-cred', usernameVariable: 'HB_USER', passwordVariable: 'HB_PASS')]) {
                         script {
                             def remoteIP = '192.168.0.160'
                             def remoteUser = 'kevin'
-
-                            // 1. Secret File (ALPHACAR)의 내용을 Jenkins agent에서 읽어옴
+                            
+                            // 1. Secret File 내용을 읽어옴
                             def envContent = readFile(ENV_FILE_PATH).trim()
 
                             sh """
                             ssh -o StrictHostKeyChecking=no ${remoteUser}@${remoteIP} '
-                                # 2. 원격 서버(192.168.0.160)의 deploy 폴더에 .env 파일 생성 및 내용 주입
-                                echo "${envContent}" > ~/alphacar/deploy/.env && \\
+                                # 2. 원격 서버에 .env 파일 생성 (Secret 내용 + 버전 정보 추가)
+                                echo "${envContent}" > ~/alphacar/deploy/.env
+                                echo "BACKEND_VERSION=${BACKEND_VERSION}" >> ~/alphacar/deploy/.env
+                                echo "FRONTEND_VERSION=${FRONTEND_VERSION}" >> ~/alphacar/deploy/.env
 
                                 # 3. 하버 로그인 및 배포
                                 cd ~/alphacar/deploy && \\
@@ -123,7 +128,7 @@ pipeline {
                                 docker compose pull && \\
                                 docker compose up -d --force-recreate && \\
 
-                                # 4. 보안을 위해 .env 파일 즉시 삭제
+                                # 4. 보안을 위해 .env 파일 삭제
                                 rm ~/alphacar/deploy/.env
                             '
                             """

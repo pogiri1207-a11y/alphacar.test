@@ -83,6 +83,15 @@ services:
       # Redis
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
+    extra_hosts:
+      - "mongodb_primary:${MONGO_HOST}"
+      - "mongodb_secondary_1:${MONGO_HOST}"
+      - "mongodb_secondary_2:${MONGO_HOST}"
+      # 하이픈(-) 버전도 안전하게 포함
+      - "mongodb-primary:${MONGO_HOST}"
+      - "mongodb-secondary-1:${MONGO_HOST}"
+      - "mongodb-secondary-2:${MONGO_HOST}"
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.main.loadbalancer.server.port=3002"
@@ -112,6 +121,15 @@ services:
       - DATABASE_USER=${MONGO_USER}
       - DATABASE_PASSWORD=${MONGO_PASS}
       - DATABASE_NAME=${MONGO_DB_NAME}
+    extra_hosts:
+      - "mongodb_primary:${MONGO_HOST}"
+      - "mongodb_secondary_1:${MONGO_HOST}"
+      - "mongodb_secondary_2:${MONGO_HOST}"
+      # 하이픈(-) 버전도 안전하게 포함
+      - "mongodb-primary:${MONGO_HOST}"
+      - "mongodb-secondary-1:${MONGO_HOST}"
+      - "mongodb-secondary-2:${MONGO_HOST}"
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.quote.loadbalancer.server.port=3003"
@@ -137,6 +155,15 @@ services:
       - DATABASE_USER=${MONGO_USER}
       - DATABASE_PASSWORD=${MONGO_PASS}
       - DATABASE_NAME=${MONGO_DB_NAME}
+    extra_hosts:
+      - "mongodb_primary:${MONGO_HOST}"
+      - "mongodb_secondary_1:${MONGO_HOST}"
+      - "mongodb_secondary_2:${MONGO_HOST}"
+      # 하이픈(-) 버전도 안전하게 포함
+      - "mongodb-primary:${MONGO_HOST}"
+      - "mongodb-secondary-1:${MONGO_HOST}"
+      - "mongodb-secondary-2:${MONGO_HOST}"
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.search.loadbalancer.server.port=3007"
@@ -168,6 +195,15 @@ services:
       - MARIADB_USER=${MARIADB_USER}
       - MARIADB_PASSWORD=${MARIADB_PASS}
       - MARIADB_DATABASE=${MARIADB_DB_NAME}
+    extra_hosts:
+      - "mongodb_primary:${MONGO_HOST}"
+      - "mongodb_secondary_1:${MONGO_HOST}"
+      - "mongodb_secondary_2:${MONGO_HOST}"
+      # 하이픈(-) 버전도 안전하게 포함
+      - "mongodb-primary:${MONGO_HOST}"
+      - "mongodb-secondary-1:${MONGO_HOST}"
+      - "mongodb-secondary-2:${MONGO_HOST}"
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.mypage.loadbalancer.server.port=3006"
@@ -216,8 +252,8 @@ services:
       # MongoDB (계정 다름 주의!)
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
-      - DATABASE_USER=${MONGO_USER_AICHAT}  # proj
-      - DATABASE_PASSWORD=${MONGO_PASS_AICHAT} # pass123
+      - DATABASE_USER=${MONGO_USER_AICHAT}
+      - DATABASE_PASSWORD=${MONGO_PASS_AICHAT}
       - DATABASE_NAME=${MONGO_DB_NAME}
       # AWS Bedrock
       - AWS_REGION=${AWS_REGION}
@@ -230,6 +266,14 @@ services:
     volumes:
       - ../backend/aichat/vector_store:/app/vector_store
       - ../backend/aichat/dist:/app/dist
+    extra_hosts:
+      - "mongodb_primary:${MONGO_HOST}"
+      - "mongodb_secondary_1:${MONGO_HOST}"
+      - "mongodb_secondary_2:${MONGO_HOST}"
+      # 하이픈(-) 버전도 안전하게 포함
+      - "mongodb-primary:${MONGO_HOST}"
+      - "mongodb-secondary-1:${MONGO_HOST}"
+      - "mongodb-secondary-2:${MONGO_HOST}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.aichat.loadbalancer.server.port=4000"
@@ -256,6 +300,14 @@ services:
       - DATABASE_USER=${MONGO_USER}
       - DATABASE_PASSWORD=${MONGO_PASS}
       - DATABASE_NAME=${MONGO_DB_NAME}
+    extra_hosts:
+      - "mongodb_primary:${MONGO_HOST}"
+      - "mongodb_secondary_1:${MONGO_HOST}"
+      - "mongodb_secondary_2:${MONGO_HOST}"
+      # 하이픈(-) 버전도 안전하게 포함
+      - "mongodb-primary:${MONGO_HOST}"
+      - "mongodb-secondary-1:${MONGO_HOST}"
+      - "mongodb-secondary-2:${MONGO_HOST}"
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.drive.loadbalancer.server.port=3008"
