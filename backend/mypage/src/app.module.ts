@@ -1,5 +1,6 @@
 // src/app.module.ts
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module'; 
 import { AuthController } from './auth/auth.controller'; 
@@ -10,17 +11,22 @@ import { AppService } from './app.service';     // 👈 [추가]
 
 @Module({
   imports: [
-    // MariaDB 연결 설정 (성공 코드 유지)
-    TypeOrmModule.forRoot({
-      type: 'mariadb',
-      host: '211.46.52.151',
-      port: 15432, // DB 포트
-      username: 'team1',
-      password: 'Gkrtod1@', // 계정 비밀번호
-      database: 'team1',
-      entities: [User],
-      synchronize: true,
-      logging: true,
+    ConfigModule.forRoot({ isGlobal: true }),
+    // MariaDB 연결 설정 (환경 변수 사용)
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        type: 'mariadb',
+        host: config.get<string>('MARIADB_HOST'),
+        port: config.get<number>('MARIADB_PORT') || 15432,
+        username: config.get<string>('MARIADB_USERNAME') || 'team1',
+        password: config.get<string>('MARIADB_PASSWORD'),
+        database: config.get<string>('MARIADB_DATABASE') || 'team1',
+        entities: [User],
+        synchronize: config.get<string>('NODE_ENV') !== 'production',
+        logging: config.get<string>('NODE_ENV') === 'development',
+      }),
+      inject: [ConfigService],
     }),
     AuthModule, 
     

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { User } from '../entities/user.entity';
@@ -10,8 +11,16 @@ import { User } from '../entities/user.entity';
 @Module({
   imports: [
     HttpModule,
+    ConfigModule,
     TypeOrmModule.forFeature([User]),
-    JwtModule.register({ secret: 'YOUR_SECRET_KEY', signOptions: { expiresIn: '1h' } }),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET') || 'fallback-secret-for-dev-only',
+        signOptions: { expiresIn: '1h' }
+      }),
+      inject: [ConfigService],
+    }),
   ],
   controllers: [AuthController],
   providers: [AuthService],

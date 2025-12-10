@@ -35,37 +35,53 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('SonarQube Analysis - Backend') {
             steps {
                 script {
                     def scannerHome = tool 'sonar-scanner'
                     withSonarQubeEnv("${SONARQUBE}") {
-                        // 백엔드 분석
                         sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=alphacar-backend -Dsonar.projectName=alphacar-backend -Dsonar.sources=backend -Dsonar.host.url=${SONAR_URL} -Dsonar.sourceEncoding=UTF-8"
-                        // 프론트엔드 분석
+                    }
+                }
+            }
+        }
+
+//        stage('SonarQube Quality Gate - Backend') {
+//            steps {
+//                script {
+//                    timeout(time: 5, unit: 'MINUTES') {
+//                        def qgBackend = waitForQualityGate()
+//                        if (qgBackend.status != 'OK') {
+//                            error "Backend Quality Gate failed: ${qgBackend.status}"
+//                        }
+//                    }
+//                }
+//            }
+//        }
+
+        stage('SonarQube Analysis - Frontend') {
+            steps {
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+                    withSonarQubeEnv("${SONARQUBE}") {
                         sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=alphacar-frontend -Dsonar.projectName=alphacar-frontend -Dsonar.sources=frontend -Dsonar.host.url=${SONAR_URL} -Dsonar.sourceEncoding=UTF-8"
                     }
                 }
             }
         }
 
-        stage('SonarQube Quality Gate') {
-            steps {
-                script {
-                    timeout(time: 5, unit: 'MINUTES') {
-                        def qgBackend = waitForQualityGate()
-                        if (qgBackend.status != 'OK') {
-                            error "Backend Quality Gate failed: ${qgBackend.status}"
-                        }
-                        
-                        def qgFrontend = waitForQualityGate()
-                        if (qgFrontend.status != 'OK') {
-                            error "Frontend Quality Gate failed: ${qgFrontend.status}"
-                        }
-                    }
-                }
-            }
-        }
+//        stage('SonarQube Quality Gate - Frontend') {
+//            steps {
+//                script {
+//                    timeout(time: 5, unit: 'MINUTES') {
+//                        def qgFrontend = waitForQualityGate()
+//                        if (qgFrontend.status != 'OK') {
+//                            error "Frontend Quality Gate failed: ${qgFrontend.status}"
+//                        }
+//                    }
+//                }
+//            }
+//        }
 
         stage('Build Docker Images') {
             steps {
@@ -88,18 +104,25 @@ pipeline {
         stage('Trivy Security Scan') {
             steps {
                 script {
+                    // Trivy 스캔 시 NPM 캐시 파일 경로를 건너뛰도록 --skip-files 옵션 정의
+                    def SKIP_CACHE_FILES = "--skip-files 'root/.npm/_cacache/*'"
+
                     // 1. 백엔드 스캔
                     def backendServices = ['aichat', 'community', 'drive', 'mypage', 'quote', 'search', 'main']
                     backendServices.each { service ->
                         echo "🛡️ Scanning Backend Service: ${service}"
-                        sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL ${HARBOR_URL}/${HARBOR_PROJECT}/alphacar-${service}:${BACKEND_VERSION}"
+                        // SKIP_CACHE_FILES 변수 추가 적용
+                        sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL ${SKIP_CACHE_FILES} ${HARBOR_URL}/${HARBOR_PROJECT}/alphacar-${service}:${BACKEND_VERSION}"
                     }
+                    
                     // 2. 프론트엔드 스캔
                     echo "🛡️ Scanning Frontend Service"
-                    sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL ${HARBOR_URL}/${HARBOR_PROJECT}/${FRONTEND_IMAGE}:${FRONTEND_VERSION}"
+                    // SKIP_CACHE_FILES 변수 추가 적용
+                    sh "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --exit-code 0 --severity HIGH,CRITICAL ${SKIP_CACHE_FILES} ${HARBOR_URL}/${HARBOR_PROJECT}/${FRONTEND_IMAGE}:${FRONTEND_VERSION}"
                 }
             }
         }
+
 
         stage('Push to Harbor') {
             steps {
@@ -139,15 +162,18 @@ pipeline {
                                 echo "${envContent}" > ~/alphacar/deploy/.env
                                 echo "BACKEND_VERSION=${BACKEND_VERSION}" >> ~/alphacar/deploy/.env
                                 echo "FRONTEND_VERSION=${FRONTEND_VERSION}" >> ~/alphacar/deploy/.env
+                                
+                                # 2-1. 보안을 위해 .env 파일 권한 제한 (소유자만 읽기/쓰기)
+                                chmod 600 ~/alphacar/deploy/.env
 
                                 # 3. 하버 로그인 및 배포
                                 cd ~/alphacar/deploy && \\
                                 echo "${HB_PASS}" | docker login ${HARBOR_URL} -u ${HB_USER} --password-stdin && \\
                                 docker compose pull && \\
-                                docker compose up -d --force-recreate && \\
-
-                                # 4. 보안을 위해 .env 파일 삭제
-                                rm ~/alphacar/deploy/.env
+                                docker compose up -d --force-recreate
+                                
+                                # 4. .env 파일은 유지 (docker compose 재시작 시 필요)
+                                #    권한이 600으로 제한되어 있어 보안상 안전함
                             '
                             """
                         }

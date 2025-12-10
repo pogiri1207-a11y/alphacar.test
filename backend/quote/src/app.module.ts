@@ -26,11 +26,16 @@ import { VehiclesModule } from './vehicles/vehicles.module';
             inject: [ConfigService],
         }),
 
-        // 2. 견적서 저장용 원격 DB 연결 (유지)
-        MongooseModule.forRoot(
-            'mongodb://naver_car_data_user:naver_car_data_password@192.168.0.201:27017/estimate_db?authSource=admin',
-            { connectionName: 'estimate_conn' }
-        ),
+        // 2. 견적서 저장용 원격 DB 연결 (환경 변수 사용)
+        MongooseModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: async (config: ConfigService) => ({
+                uri: config.get<string>('ESTIMATE_DB_URI') ||
+                     `mongodb://${config.get<string>('ESTIMATE_DB_USER')}:${config.get<string>('ESTIMATE_DB_PASSWORD')}@${config.get<string>('ESTIMATE_DB_HOST')}:${config.get<string>('ESTIMATE_DB_PORT')}/${config.get<string>('ESTIMATE_DB_NAME')}?authSource=admin`,
+                connectionName: 'estimate_conn'
+            }),
+            inject: [ConfigService],
+        }),
 
         // 3. 컬렉션 등록
         MongooseModule.forFeature([

@@ -21,7 +21,7 @@ import { CommunityPost } from './entities/community-post.entity';
         database: config.get<string>('MARIADB_DATABASE'),
 	charset: 'utf8mb4',
 	entities: [CommunityPost],
-        synchronize: true, // 테이블 자동 생성
+        synchronize: config.get<string>('NODE_ENV') !== 'production', // 프로덕션에서는 false
         logging: true,
       }),
     }),
