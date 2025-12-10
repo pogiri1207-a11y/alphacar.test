@@ -28,11 +28,11 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 
         // 2. 견적서 저장용 원격 DB 연결 (환경 변수 사용)
         MongooseModule.forRootAsync({
+	    connectionName: 'estimate_conn',
             imports: [ConfigModule],
             useFactory: async (config: ConfigService) => ({
                 uri: config.get<string>('ESTIMATE_DB_URI') ||
                      `mongodb://${config.get<string>('ESTIMATE_DB_USER')}:${config.get<string>('ESTIMATE_DB_PASSWORD')}@${config.get<string>('ESTIMATE_DB_HOST')}:${config.get<string>('ESTIMATE_DB_PORT')}/${config.get<string>('ESTIMATE_DB_NAME')}?authSource=admin`,
-                connectionName: 'estimate_conn'
             }),
             inject: [ConfigService],
         }),

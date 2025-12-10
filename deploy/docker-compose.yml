@@ -1,11 +1,13 @@
-version: '3.8'
-
+# [변경 1] 네트워크 분리 선언
 networks:
-  backnet:
+  front-net:
+    driver: bridge
+  back-net:
     driver: bridge
 
 services:
-  # [Traefik]
+  # [Traefik] - Gateway
+  # 역할: front-net에서 오는 요청을 받아 back-net의 서비스로 라우팅
   traefik:
     image: traefik:3.6
     container_name: traefik
@@ -15,6 +17,8 @@ services:
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      # Traefik이 백엔드 통신 시 사용할 기본 네트워크 지정 (중요)
+      - "--providers.docker.network=back-net" 
       - "--entrypoints.web.address=:9090"
       - "--api.insecure=true"
       - "--log.level=DEBUG"
@@ -24,10 +28,13 @@ services:
       - "${TRAEFIK_DASHBOARD_PORT}:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    # [변경 2] Traefik은 두 네트워크 모두 접속해야 함
     networks:
-      - backnet
+      - front-net
+      - back-net
 
-  # [Nginx]
+  # [Nginx] - Proxy / Entry
+  # 역할: 클라이언트의 요청을 가장 먼저 받는 곳 (front-net)
   nginx:
     image: 192.168.0.169/alphacar-project/alphacar-nginx:${FRONTEND_VERSION:-1.0.0}
     container_name: nginx
@@ -42,10 +49,12 @@ services:
     depends_on:
       - frontend
       - traefik
+    # [변경 3] Nginx는 외부 접점 및 Traefik/Frontend 통신용 front-net 사용
     networks:
-      - backnet
+      - front-net
 
   # [Frontend]
+  # 역할: UI 제공 (front-net)
   frontend:
     image: 192.168.0.169/alphacar-project/alphacar-frontend:${FRONTEND_VERSION:-1.0.0}
     container_name: frontend
@@ -60,70 +69,80 @@ services:
       - "8000"
     volumes:
       - /etc/nginx/ssl/selfsigned.crt:/etc/ssl/certs/selfsigned.crt:ro
+    # [변경 4] Frontend는 front-net 사용
     networks:
-      - backnet
+      - front-net
+
+  # =========================================================
+  # [Backend Services]
+  # 역할: 비즈니스 로직 처리 (back-net에 격리됨)
+  # 외부 포트(ports)를 제거하고 Traefik을 통해서만 통신 권장
+  # =========================================================
 
   # [Main Backend]
   main-backend:
     image: 192.168.0.169/alphacar-project/alphacar-main:${BACKEND_VERSION:-1.0.0}
     container_name: main_backend
     restart: always
+    # [변경 5] 백엔드는 오직 back-net에만 존재 (Traefik과만 통신)
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=3002
       - SERVICE_NAME=main-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
       - OTEL_LOG_LEVEL=debug
       - OTEL_DIAG_LEVEL=debug
-      # MongoDB
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
       - DATABASE_USER=${MONGO_USER}
       - DATABASE_PASSWORD=${MONGO_PASS}
       - DATABASE_NAME=${MONGO_DB_NAME}
-      # Redis
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
     extra_hosts:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
       - "mongodb_secondary_2:${MONGO_HOST}"
-      # 하이픈(-) 버전도 안전하게 포함
       - "mongodb-primary:${MONGO_HOST}"
       - "mongodb-secondary-1:${MONGO_HOST}"
       - "mongodb-secondary-2:${MONGO_HOST}"
-
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.main.loadbalancer.server.port=3002"
       - "traefik.http.middlewares.strip-api.stripprefix.prefixes=/api"
+
+      # [변경 1] 우선순위(Priority)를 60으로 설정 (Quote의 50보다 높게!)
+      - "traefik.http.routers.main.priority=60"
+
+      # [변경 2] vehicles 하위의 makers, models, trims 등도 Main이 가져가도록 규칙 추가
+      - "traefik.http.routers.main.rule=PathPrefix(`/api/main`) || PathPrefix(`/api/history`) || PathPrefix(`/api/recent-views`) || PathPrefix(`/api/sales`) || PathPrefix(`/api/brands`) || PathPrefix(`/api/favorites`) || PathPrefix(`/api/log-view`) || PathPrefix(`/api/makers`) || PathPrefix(`/api/models`) || PathPrefix(`/api/trims`) || PathPrefix(`/api/cars`) || PathPrefix(`/api/review-analysis`) || PathPrefix(`/api/vehicles/makers`) || PathPrefix(`/api/vehicles/models`) || PathPrefix(`/api/vehicles/trims`) || PathPrefix(`/api/vehicles/cars`)"
+
       - "traefik.http.routers.main.entrypoints=web"
-      - "traefik.http.routers.main.rule=PathPrefix(`/api/main`) || PathPrefix(`/api/history`) || PathPrefix(`/api/recent-views`) || PathPrefix(`/api/sales`) || PathPrefix(`/api/brands`) || PathPrefix(`/api/favorites`) || PathPrefix(`/api/log-view`) || PathPrefix(`/api/makers`) || PathPrefix(`/api/models`) || PathPrefix(`/api/trims`) || PathPrefix(`/api/cars`) || PathPrefix(`/api/review-analysis`)"
       - "traefik.http.routers.main.middlewares=strip-api"
+
+      # (Detail 라우터는 그대로 유지)
       - "traefik.http.routers.main-detail.rule=PathPrefix(`/api/vehicles/detail`)"
       - "traefik.http.routers.main-detail.entrypoints=web"
-      - "traefik.http.routers.main-detail.priority=100"
+      - "traefik.http.routers.main-detail.priority=100" # 얘는 이미 높음
       - "traefik.http.routers.main-detail.middlewares=strip-api"
+
 
   # [Quote Backend]
   quote-backend:
-    #image: 192.168.0.169/alphacar-project/alphacar-quote:${BACKEND_VERSION:-1.0.0}
     image: 192.168.0.169/alphacar-project/alphacar-quote:${BACKEND_VERSION:-1.0.0}
-    #    ports:
-    #      - "3003:3003"
-    #    container_name: quote_backend
     deploy:
       mode: replicated
       replicas: 3
     restart: always
+    # [변경 6] back-net 적용
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=3003
       - SERVICE_NAME=quote-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      # MongoDB
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
       - DATABASE_USER=${MONGO_USER}
@@ -133,13 +152,12 @@ services:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
       - "mongodb_secondary_2:${MONGO_HOST}"
-      # 하이픈(-) 버전도 안전하게 포함
       - "mongodb-primary:${MONGO_HOST}"
       - "mongodb-secondary-1:${MONGO_HOST}"
       - "mongodb-secondary-2:${MONGO_HOST}"
-
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.quote.loadbalancer.server.port=3003"
       - "traefik.http.middlewares.strip-api-quote.stripprefix.prefixes=/api"
       - "traefik.http.routers.quote.rule=PathPrefix(`/api/vehicles`) || PathPrefix(`/api/estimate`) || PathPrefix(`/api/quote`)"
@@ -148,16 +166,16 @@ services:
 
   # [Search Backend]
   search-backend:
-    image: 192.168.0.169/alphacar-project/alphacar-search:${BACKEND_VERSION:-1.0.0} 
+    image: 192.168.0.169/alphacar-project/alphacar-search:${BACKEND_VERSION:-1.0.0}
     container_name: search_backend
     restart: always
+    # [변경 7] back-net 적용
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=3007
       - SERVICE_NAME=search-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      # MongoDB
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
       - DATABASE_USER=${MONGO_USER}
@@ -167,13 +185,12 @@ services:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
       - "mongodb_secondary_2:${MONGO_HOST}"
-      # 하이픈(-) 버전도 안전하게 포함
       - "mongodb-primary:${MONGO_HOST}"
       - "mongodb-secondary-1:${MONGO_HOST}"
       - "mongodb-secondary-2:${MONGO_HOST}"
-
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.search.loadbalancer.server.port=3007"
       - "traefik.http.middlewares.strip-api-search.stripprefix.prefixes=/api"
       - "traefik.http.routers.search.rule=PathPrefix(`/api/search`)"
@@ -185,19 +202,18 @@ services:
     image: 192.168.0.169/alphacar-project/alphacar-mypage:${BACKEND_VERSION:-1.0.0}
     container_name: mypage_backend
     restart: always
+    # [변경 8] back-net 적용
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=3006
       - SERVICE_NAME=mypage-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      # MongoDB
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
       - DATABASE_USER=${MONGO_USER}
       - DATABASE_PASSWORD=${MONGO_PASS}
       - DATABASE_NAME=${MONGO_DB_NAME}
-      # MariaDB
       - MARIADB_HOST=${MARIADB_HOST}
       - MARIADB_PORT=${MARIADB_PORT}
       - MARIADB_USERNAME=${MARIADB_USER}
@@ -207,13 +223,12 @@ services:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
       - "mongodb_secondary_2:${MONGO_HOST}"
-      # 하이픈(-) 버전도 안전하게 포함
       - "mongodb-primary:${MONGO_HOST}"
       - "mongodb-secondary-1:${MONGO_HOST}"
       - "mongodb-secondary-2:${MONGO_HOST}"
-
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.mypage.loadbalancer.server.port=3006"
       - "traefik.http.middlewares.strip-api-mypage.stripprefix.prefixes=/api"
       - "traefik.http.routers.mypage.rule=PathPrefix(`/api/mypage`) || PathPrefix(`/auth`)"
@@ -225,13 +240,13 @@ services:
     image: 192.168.0.169/alphacar-project/alphacar-community:${BACKEND_VERSION:-1.0.0}
     container_name: community_backend
     restart: always
+    # [변경 9] back-net 적용
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=3005
       - SERVICE_NAME=community-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      # MariaDB
       - MARIADB_TYPE=mariadb
       - MARIADB_HOST=${MARIADB_HOST}
       - MARIADB_PORT=${MARIADB_PORT}
@@ -240,6 +255,7 @@ services:
       - MARIADB_DATABASE=${MARIADB_DB_NAME}
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.community.loadbalancer.server.port=3005"
       - "traefik.http.middlewares.strip-api-comm.stripprefix.prefixes=/api"
       - "traefik.http.routers.community.rule=PathPrefix(`/api/community`)"
@@ -251,28 +267,27 @@ services:
     image: 192.168.0.169/alphacar-project/alphacar-aichat:${BACKEND_VERSION:-1.0.0}
     container_name: aichat_backend
     restart: always
+    # [변경 10] back-net 적용
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=4000
       - SERVICE_NAME=aichat-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
       - OTEL_LOG_LEVEL=debug
       - OTEL_DIAG_LEVEL=debug
-      # MongoDB (계정 다름 주의!)
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
       - DATABASE_USER=${MONGO_USER_AICHAT}
       - DATABASE_PASSWORD=${MONGO_PASS_AICHAT}
       - DATABASE_NAME=${MONGO_DB_NAME}
-      # AWS Bedrock
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - BEDROCK_GUARDRAIL_ID=${BEDROCK_GUARDRAIL_ID}
       - BEDROCK_GUARDRAIL_VERSION=${BEDROCK_GUARDRAIL_VERSION}
       - BEDROCK_EMBEDDING_MODEL_ID=${BEDROCK_EMBEDDING_MODEL_ID}
-      - BEDROCK_MODEL_ID=${BEDROCK_EMBEDDING_MODEL_ID}  
+      - BEDROCK_MODEL_ID=${BEDROCK_EMBEDDING_MODEL_ID}
       - BEDROCK_LLM_MODEL_ID=${BEDROCK_LLM_MODEL_ID}
     volumes:
       - ../backend/aichat/vector_store:/app/vector_store
@@ -281,12 +296,12 @@ services:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
       - "mongodb_secondary_2:${MONGO_HOST}"
-      # 하이픈(-) 버전도 안전하게 포함
       - "mongodb-primary:${MONGO_HOST}"
       - "mongodb-secondary-1:${MONGO_HOST}"
       - "mongodb-secondary-2:${MONGO_HOST}"
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.aichat.loadbalancer.server.port=4000"
       - "traefik.http.middlewares.ai-rewrite.replacepathregex.regex=^/api/chat/(.*)"
       - "traefik.http.middlewares.ai-rewrite.replacepathregex.replacement=/chat/$$1"
@@ -299,13 +314,13 @@ services:
     image: 192.168.0.169/alphacar-project/alphacar-drive:${BACKEND_VERSION:-1.0.0}
     container_name: drive_backend
     restart: always
+    # [변경 11] back-net 적용
     networks:
-      - backnet
+      - back-net
     environment:
       - PORT=3008
       - SERVICE_NAME=drive-backend
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      # MongoDB
       - DATABASE_HOST=${MONGO_HOST}
       - DATABASE_PORT=${MONGO_PORT}
       - DATABASE_USER=${MONGO_USER}
@@ -315,12 +330,12 @@ services:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
       - "mongodb_secondary_2:${MONGO_HOST}"
-      # 하이픈(-) 버전도 안전하게 포함
       - "mongodb-primary:${MONGO_HOST}"
       - "mongodb-secondary-1:${MONGO_HOST}"
       - "mongodb-secondary-2:${MONGO_HOST}"
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=back-net"
       - "traefik.http.services.drive.loadbalancer.server.port=3008"
       - "traefik.http.middlewares.strip-api-drive.stripprefix.prefixes=/api"
       - "traefik.http.routers.drive.rule=PathPrefix(`/api/drive`)"

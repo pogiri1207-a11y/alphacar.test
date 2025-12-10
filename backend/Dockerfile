@@ -1,44 +1,55 @@
-# 1. 빌드 단계 (Node 20)
+# ---------------------------------------------------
+# 1. 빌드 단계 (Builder) - 모든 도구 포함
+# ---------------------------------------------------
 FROM node:20-alpine AS builder
 ARG APP_NAME
 
 WORKDIR /app
 
-# 🔐 빌드 스테이지에서 npm 최신 버전으로 업데이트
-RUN npm install -g npm@latest
+# 1-1. 알파인 리눅스 필수 패키지 (NestJS/Node 호환성)
+RUN apk add --no-cache libc6-compat
 
-# 모든 파일 복사
+# 1-2. 패키지 파일 복사
+# (빌드 컨텍스트가 backend/ 이므로 해당 경로 기준)
+COPY package.json package-lock.json ./
+COPY ${APP_NAME}/package.json ${APP_NAME}/
+
+# 1-3. 의존성 설치 (CI 모드: 빠르고 정확함)
+# 이때는 빌드를 위해 devDependencies(NestCLI 등)가 모두 설치됩니다.
+RUN npm install -g @nestjs/cli
+RUN npm ci
+
+# 1-4. 소스 코드 복사 및 빌드
 COPY . .
-
-# 글로벌 툴 설치 (Nest CLI 등)
-RUN npm install -g @nestjs/cli @types/node
-
-# 👇 schemas 폴더가 있다면, 앱의 src 폴더 안으로 복사
+# 스키마 복사 (필요한 경우)
 RUN [ -d "schemas" ] && cp -r schemas ${APP_NAME}/src/ || true
+# 빌드 실행 -> dist 폴더 생성
+RUN cd ${APP_NAME} && nest build
 
-# --- MSA 빌드 실행 ---
-RUN cd ${APP_NAME} && \
-    npm install && \
-    ln -s /app/${APP_NAME}/node_modules /app/node_modules && \
-    nest build
+# 🔥 [다이어트 핵심] 빌드 완료 후, 실행에 필요 없는 '개발용 패키지' 제거
+# 이 명령어가 실행되면 node_modules 크기가 확 줄어듭니다.
+RUN npm prune --production
+RUN cd ${APP_NAME} && npm prune --production
 
-# 2. 실행 단계 (최종 이미지)
+# ---------------------------------------------------
+# 2. 실행 단계 (Runner) - 초경량화
+# ---------------------------------------------------
 FROM node:20-alpine AS runner
 ARG APP_NAME
 
 WORKDIR /app
 ENV NODE_ENV=production
 
-# 런타임 파일 복사
-COPY --from=builder /app/${APP_NAME}/dist ./dist
-COPY --from=builder /app/${APP_NAME}/package.json ./package.json
+# 2-1. [절대 금지] RUN npm install 명령어 금지! ❌
+# 대신 Builder에서 이미 정리된 node_modules를 복사해옵니다. ✅
+COPY --from=builder /app/node_modules ./node_modules
+# 앱 내부에 별도 node_modules가 생성된 경우를 대비해 복사 (없으면 무시됨)
+COPY --from=builder /app/${APP_NAME}/node_modules ./${APP_NAME}/node_modules
 
-# 프로덕션 의존성 설치 후, npm(및 내부 취약 라이브러리) 제거
-RUN npm install --production && \
-    rm -rf /usr/local/lib/node_modules/npm
+# 2-2. 실행 파일(dist)과 설정 파일(package.json) 한 번에 복사
+# 레이어를 줄이기 위해 한 줄로 처리
+COPY --from=builder /app/${APP_NAME}/dist /app/${APP_NAME}/package.json ./
 
+# 2-3. 실행
 EXPOSE 3000-4000
-
-# main.js 자동 탐색해서 실행
-CMD ["sh", "-c", "node $(find dist -name main.js | head -n 1)"]
-
+CMD ["sh", "-c", "node $(find . -name main.js | head -n 1)"]

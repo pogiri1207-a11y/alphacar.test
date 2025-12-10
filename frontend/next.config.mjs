@@ -1,112 +1,140 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 👇 여기에 추가했습니다!
   output: 'standalone',
-
   reactStrictMode: true,
+
   async rewrites() {
     return [
-      // 1. 기존 AI 채팅 서버 설정 (유지)
+      // ----------------------------------------------------
+      // [AI CHAT SERVICE] - Traefik을 통해 4000번 포트로 연결
+      // ----------------------------------------------------
       {
         source: '/api/chat/:path*',
-        destination: 'http://127.0.0.1:4000/chat/:path*',
+        // Traefik의 /api/chat 라우팅 규칙에 매칭되도록 보냄
+        destination: 'http://traefik:9090/api/chat/:path*',
       },
 
       // ----------------------------------------------------
-      // ★ [MAIN SERVICE - 3002 포트] (차량 상세 정보)
+      // ★ [MAIN SERVICE] (차량 상세 정보)
       // ----------------------------------------------------
       
-      // 1. [차량 상세 정보] /api/vehicles/detail은 main 서비스(3002)로 보냅니다.
-      // 쿼리 파라미터는 자동으로 전달되므로 별도 처리 불필요
+      {
+        source: '/api/vehicles/makers',
+        destination: 'http://traefik:9090/api/makers', // main-backend가 아는 주소로 변경
+      },
+      {
+        source: '/api/vehicles/models',
+        destination: 'http://traefik:9090/api/models',
+      },
+      {
+        source: '/api/vehicles/trims',
+        destination: 'http://traefik:9090/api/trims',
+      },
+      {
+        source: '/api/vehicles/cars',
+        destination: 'http://traefik:9090/api/cars',
+      },
+
+      // 1. [차량 상세 정보]
       {
         source: '/api/vehicles/detail',
-        destination: 'http://192.168.0.160:3002/vehicles/detail',
+        // Traefik의 /api/vehicles/detail 라우팅 규칙 매칭
+        destination: 'http://traefik:9090/api/vehicles/detail',
       },
-      
+
       // ----------------------------------------------------
-      // ★ [QUOTE SERVICE - 3003 포트] (유연성 확보)
+      // ★ [QUOTE SERVICE] (견적 및 기타 차량 정보)
       // ----------------------------------------------------
-      
-      // 2. [나머지 차량 관련] /api/vehicles/* 경로를 3003 포트로 보냅니다.
+
+      // 2. [나머지 차량 관련]
       {
         source: '/api/vehicles/:path*',
-        destination: 'http://192.168.0.160:3003/api/vehicles/:path*',
+        destination: 'http://traefik:9090/api/vehicles/:path*',
       },
 
-      // 2. [견적 저장 및 목록] /api/estimate/* (3003)
+      // 2. [견적 저장 및 목록]
       {
         source: '/api/estimate/:path*',
-        destination: 'http://192.168.0.160:3003/api/estimate/:path*',
+        destination: 'http://traefik:9090/api/estimate/:path*',
       },
 
-      // ✅ 3. [최근 본 차량 (History)] - 이 규칙이 꼭 있어야 합니다!
+      // ✅ 3. [최근 본 차량 (History)]
       {
         source: '/api/history/:path*',
-        destination: 'http://192.168.0.160:3003/api/history/:path*',
+        destination: 'http://traefik:9090/api/history/:path*',
       },
 
-      // 3. [이전 API 호환성 확보] /api/quote/* (3003)
+      // 3. [이전 API 호환성 확보]
       {
         source: '/api/quote/:path*',
-        destination: 'http://192.168.0.160:3003/api/quote/:path*',
+        destination: 'http://traefik:9090/api/quote/:path*',
       },
-      
+
       // ----------------------------------------------------
-      // [다른 서비스 규칙] (다른 포트 규칙은 유지)
+      // [MAIN SERVICE - 일반 데이터]
       // ----------------------------------------------------
-      
-      // 4. [메인 데이터 처리] (3002)
+
+      // 4. [메인 데이터 처리]
       {
         source: '/api/main/:path*',
-        destination: 'http://192.168.0.160:3002/main/:path*',
+        destination: 'http://traefik:9090/api/main/:path*',
       },
-      
-      // 4-1. [브랜드 목록] (3002)
+
+      // 4-1. [브랜드 목록]
       {
         source: '/api/brands',
-        destination: 'http://192.168.0.160:3002/brands',
+        destination: 'http://traefik:9090/api/brands',
       },
-      
-      // 4-2. [판매 순위] (3002)
+
+      // 4-2. [판매 순위]
+      // Traefik의 PathPrefix('/api/sales') 규칙을 타도록 설정
       {
         source: '/api/ranking',
-        destination: 'http://192.168.0.160:3002/sales/rankings',
+        destination: 'http://traefik:9090/api/sales/rankings',
       },
       {
         source: '/api/sales/:path*',
-        destination: 'http://192.168.0.160:3002/sales/:path*',
+        destination: 'http://traefik:9090/api/sales/:path*',
       },
-      
-      // 5. [찜하기 기능] (3002)
+
+      // 5. [찜하기 기능]
       {
         source: '/api/favorites/:path*',
-        destination: 'http://192.168.0.160:3002/favorites/:path*',
+        destination: 'http://traefik:9090/api/favorites/:path*',
       },
-      
-      // 5-1. [최근 본 차량] (3002)
+
+      // 5-1. [최근 본 차량]
       {
         source: '/api/recent-views',
-        destination: 'http://192.168.0.160:3002/recent-views',
+        destination: 'http://traefik:9090/api/recent-views',
       },
-      
-      // 5-2. [리뷰 분석] (3002)
+
+      // 5-2. [리뷰 분석]
       {
         source: '/api/review-analysis',
-        destination: 'http://192.168.0.160:3002/review-analysis',
+        destination: 'http://traefik:9090/api/review-analysis',
       },
-      
-      // 5. [다른 서비스]
+
+      // ----------------------------------------------------
+      // [OTHER SERVICES]
+      // ----------------------------------------------------
+
+      // 6. [커뮤니티]
       {
         source: '/api/community/:path*',
-        destination: 'http://192.168.0.160:3005/community/:path*',
+        destination: 'http://traefik:9090/api/community/:path*',
       },
+
+      // 7. [마이페이지]
       {
         source: '/api/mypage/:path*',
-        destination: 'http://192.168.0.160:3006/mypage/:path*',
+        destination: 'http://traefik:9090/api/mypage/:path*',
       },
+      
+      // 8. [검색]
       {
         source: '/api/search/:path*',
-        destination: 'http://192.168.0.160:3007/search/:path*',
+        destination: 'http://traefik:9090/api/search/:path*',
       },
     ];
   },

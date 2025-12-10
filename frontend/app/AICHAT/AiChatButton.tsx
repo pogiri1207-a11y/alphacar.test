@@ -2,6 +2,8 @@
 "use client";
 
 import { useState, useEffect, useRef, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { fetchMypageInfo } from "@/lib/api";
 import MascotLoader from "./MascotLoader";
 
 const DEFAULT_WIDTH = 430;
@@ -32,6 +34,7 @@ interface ContentSegment {
 }
 
 export default function AiChatButton() {
+  const router = useRouter();
   const [open, setOpen] = useState<boolean>(false);
   const [isNarrow, setIsNarrow] = useState<boolean>(false);
   const [isPressed, setIsPressed] = useState<boolean>(false);
@@ -224,6 +227,19 @@ export default function AiChatButton() {
     const msgToSend = customMessage || input;
     if ((!msgToSend.trim() && !selectedFile) || loading) return;
 
+    // socialId 가져오기 (localStorage에서)
+    const socialId = typeof window !== 'undefined' 
+      ? localStorage.getItem('user_social_id')
+      : null;
+
+    if (!socialId) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "system", content: "로그인이 필요합니다. 먼저 로그인해주세요." },
+      ]);
+      return;
+    }
+
     const userMsg: Message = { role: "user", content: msgToSend, image: previewUrl || undefined };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -237,18 +253,34 @@ export default function AiChatButton() {
         
         const res = await fetch("/api/chat/image", {
           method: "POST",
+          headers: {
+            "x-social-id": socialId,
+          },
           body: formData,
         });
-        if (!res.ok) throw new Error("Image upload failed");
+        if (!res.ok) {
+          if (res.status === 401) {
+            throw new Error("로그인이 필요합니다. 먼저 로그인해주세요.");
+          }
+          throw new Error("Image upload failed");
+        }
         data = await res.json();
         clearImageSelection();
       } else {
         const res = await fetch("/api/chat/ask", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "x-social-id": socialId,
+          },
           body: JSON.stringify({ message: userMsg.content }),
         });
-        if (!res.ok) throw new Error("Network error");
+        if (!res.ok) {
+          if (res.status === 401) {
+            throw new Error("로그인이 필요합니다. 먼저 로그인해주세요.");
+          }
+          throw new Error("Network error");
+        }
         data = await res.json();
       }
 
@@ -431,27 +463,42 @@ export default function AiChatButton() {
       };
 
   // 플로팅 버튼 열기/닫기
-  const handleToggleOpen = () => {
+  const handleToggleOpen = async () => {
+    // 로그인 체크 (챗봇을 열 때만)
     if (!open) {
-      const viewportW = window.innerWidth;
-      const viewportH = window.innerHeight;
+      try {
+        const data = await fetchMypageInfo();
+        if (!data.isLoggedIn || !data.user) {
+          alert("로그인이 필요한 서비스입니다.");
+          router.push("/mypage/login");
+          return;
+        }
 
-      const width = Math.min(DEFAULT_WIDTH, viewportW - 32);
-      const height = Math.min(DEFAULT_HEIGHT, viewportH - 200);
+        const viewportW = window.innerWidth;
+        const viewportH = window.innerHeight;
 
-      const x = viewportW - width - 96;
-      const y = viewportH - height - 140;
+        const width = Math.min(DEFAULT_WIDTH, viewportW - 32);
+        const height = Math.min(DEFAULT_HEIGHT, viewportH - 200);
 
-      const safePos: Position = {
-        x: Math.max(8, x),
-        y: Math.max(8, y),
-      };
+        const x = viewportW - width - 96;
+        const y = viewportH - height - 140;
 
-      setSize({ width, height });
-      setPosition(safePos);
-      normalPosRef.current = safePos;
-      normalSizeRef.current = { width, height };
-      setIsMaximized(false);
+        const safePos: Position = {
+          x: Math.max(8, x),
+          y: Math.max(8, y),
+        };
+
+        setSize({ width, height });
+        setPosition(safePos);
+        normalPosRef.current = safePos;
+        normalSizeRef.current = { width, height };
+        setIsMaximized(false);
+      } catch (error) {
+        console.error("로그인 정보 확인 실패:", error);
+        alert("로그인 정보를 확인할 수 없습니다. 로그인 페이지로 이동합니다.");
+        router.push("/mypage/login");
+        return;
+      }
     }
 
     setOpen((prev) => !prev);
