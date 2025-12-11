@@ -1,9 +1,19 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller('aichat') // 기본 주소: /aichat
 export class AppController {
   constructor(private readonly appService: AppService) {}
+
+  // 헬스체크 엔드포인트
+  @Get()
+  health() {
+    return {
+      status: 'ok',
+      service: 'aichat-backend',
+      timestamp: new Date().toISOString()
+    };
+  }
 
   // POST http://localhost:3008/aichat
   @Post()

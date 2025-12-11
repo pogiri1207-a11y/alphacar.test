@@ -437,9 +437,11 @@ Analyze this vehicle image with EXTREME PRECISION. Follow the systematic process
       3. Extract '모델명' (Model Name) from the [차량 정보] section.
       4. Combine them into the Markdown link above. Replace '..._값' placeholders with the actual values found in the context.
 
-    [RESPONSE STRATEGY]
+    [RESPONSE STRATEGY - CRITICAL]
+    - **MANDATORY**: You MUST start your response with "${userName}님, " (e.g., "${userName}님, 현대 쏘나타는...")
     - Act like a friendly, professional car dealer.
-    - End with a follow-up question.
+    - Always address the user as "${userName}님" throughout your response.
+    - End with a follow-up question addressing "${userName}님".
 
     ${isComparisonQuery ? `
     [COMPARISON MODE]
@@ -455,9 +457,12 @@ Analyze this vehicle image with EXTREME PRECISION. Follow the systematic process
     const guardrailId = this.configService.get<string>('BEDROCK_GUARDRAIL_ID');
     const guardrailVersion = this.configService.get<string>('BEDROCK_GUARDRAIL_VERSION') || 'DRAFT';
 
+    // 사용자 메시지에 사용자 이름 포함 (더 명확하게)
+    const userMessageWithName = `${userName}님이 질문하신 내용: ${userMessage}`;
+
     const input: ConverseCommandInput = {
       modelId: 'us.meta.llama3-3-70b-instruct-v1:0',
-      messages: [{ role: 'user', content: [{ text: userMessage }] }],
+      messages: [{ role: 'user', content: [{ text: userMessageWithName }] }],
       system: [{ text: systemPrompt }],
       inferenceConfig: { maxTokens: 2048, temperature: 0.2 },
     };
@@ -478,7 +483,13 @@ Analyze this vehicle image with EXTREME PRECISION. Follow the systematic process
           return { response: "🚫 죄송합니다. 그 질문은 답변할 수 없습니다.", context_used: [] };
       }
 
-      const outputText = response.output?.message?.content?.[0]?.text || '';
+      let outputText = response.output?.message?.content?.[0]?.text || '';
+      
+      // 응답 시작 부분에 사용자 이름이 없으면 추가
+      if (outputText && !outputText.trim().startsWith(`${userName}님`)) {
+        outputText = `${userName}님, ${outputText.trim()}`;
+      }
+      
       return { response: outputText, context_used: sources };
 
     } catch (e: any) {

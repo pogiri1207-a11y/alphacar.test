@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { VehiclesController } from './vehicles.controller';
 import { VehiclesService } from './vehicles.service';
+import { AppService } from '../app.service'; // 👈 AppService 임포트 필수
 import { Vehicle, VehicleSchema } from '@schemas/vehicle.schema'; 
 import { Manufacturer, ManufacturerSchema } from '../schemas/manufacturer.schema'; // AppService 의존성 때문에 필요
 
@@ -17,6 +18,7 @@ import { Manufacturer, ManufacturerSchema } from '../schemas/manufacturer.schema
   controllers: [VehiclesController],
   providers: [
     VehiclesService, // ✅ 필수
+    AppService,
     // AppService는 @Global()이라도 DI 충돌을 피하기 위해 여기에 다시 등록 (안정적인 구조)
     // 하지만, 최종 복원 상태에서는 AppService를 제거하여 Global에 맡기는 것이 더 안전할 수 있습니다.
     // --> DI 충돌 해결 위해 AppService는 삭제, VehiclesService만 유지합니다. (이전 수정 복원)

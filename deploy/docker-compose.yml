@@ -117,8 +117,7 @@ services:
       - "traefik.http.routers.main.priority=60"
 
       # [변경 2] vehicles 하위의 makers, models, trims 등도 Main이 가져가도록 규칙 추가
-      - "traefik.http.routers.main.rule=PathPrefix(`/api/main`) || PathPrefix(`/api/history`) || PathPrefix(`/api/recent-views`) || PathPrefix(`/api/sales`) || PathPrefix(`/api/brands`) || PathPrefix(`/api/favorites`) || PathPrefix(`/api/log-view`) || PathPrefix(`/api/makers`) || PathPrefix(`/api/models`) || PathPrefix(`/api/trims`) || PathPrefix(`/api/cars`) || PathPrefix(`/api/review-analysis`) || PathPrefix(`/api/vehicles/makers`) || PathPrefix(`/api/vehicles/models`) || PathPrefix(`/api/vehicles/trims`) || PathPrefix(`/api/vehicles/cars`)"
-
+      - "traefik.http.routers.main.rule=PathPrefix(`/api/main`) || PathPrefix(`/api/history`) || PathPrefix(`/api/recent-views`) || PathPrefix(`/api/sales`) || PathPrefix(`/api/brands`) || PathPrefix(`/api/favorites`) || PathPrefix(`/api/log-view`) || PathPrefix(`/api/cars`) || PathPrefix(`/api/review-analysis`)"
       - "traefik.http.routers.main.entrypoints=web"
       - "traefik.http.routers.main.middlewares=strip-api"
 
@@ -131,10 +130,11 @@ services:
 
   # [Quote Backend]
   quote-backend:
-    image: 192.168.0.169/alphacar-project/alphacar-quote:${BACKEND_VERSION:-1.0.0}
-    deploy:
-      mode: replicated
-      replicas: 3
+    # image: 192.168.0.169/alphacar-project/alphacar-quote:${BACKEND_VERSION:-1.0.0}
+    image: 192.168.0.169/alphacar-project/alphacar-quote:1.0.0.82
+      #    deploy:
+      # mode: replicated
+      #replicas: 3
     restart: always
     # [변경 6] back-net 적용
     networks:
@@ -291,7 +291,7 @@ services:
       - BEDROCK_LLM_MODEL_ID=${BEDROCK_LLM_MODEL_ID}
     volumes:
       - ../backend/aichat/vector_store:/app/vector_store
-      - ../backend/aichat/dist:/app/dist
+        #- ../backend/aichat/dist:/app/dist
     extra_hosts:
       - "mongodb_primary:${MONGO_HOST}"
       - "mongodb_secondary_1:${MONGO_HOST}"
