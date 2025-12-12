@@ -23,7 +23,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
             imports: [ConfigModule],
             useFactory: async (config: ConfigService) => ({
                 // 이제 .env 파일의 DATABASE_HOST 값을 사용합니다.
-                uri: `mongodb://${config.get('DATABASE_USER')}:${config.get('DATABASE_PASSWORD')}@${config.get('DATABASE_HOST')}:${config.get('DATABASE_PORT')}/${config.get('DATABASE_NAME')}?authSource=admin`,
+                uri: `mongodb://${config.get('DATABASE_USER')}:${config.get('DATABASE_PASSWORD')}@${config.get('DATABASE_HOST')}:${config.get('DATABASE_PORT')}/${config.get('DATABASE_NAME')}?authSource=admin&replicaSet=rs0`,
             }),
             inject: [ConfigService],
         }),
@@ -34,7 +34,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
             imports: [ConfigModule],
             useFactory: async (config: ConfigService) => ({
                 uri: config.get<string>('ESTIMATE_DB_URI') ||
-                     `mongodb://${config.get<string>('ESTIMATE_DB_USER')}:${config.get<string>('ESTIMATE_DB_PASSWORD')}@${config.get<string>('ESTIMATE_DB_HOST')}:${config.get<string>('ESTIMATE_DB_PORT')}/${config.get<string>('ESTIMATE_DB_NAME')}?authSource=admin`,
+                     `mongodb://${config.get<string>('ESTIMATE_DB_USER')}:${config.get<string>('ESTIMATE_DB_PASSWORD')}@${config.get<string>('ESTIMATE_DB_HOST')}:${config.get<string>('ESTIMATE_DB_PORT')}/${config.get<string>('ESTIMATE_DB_NAME')}?authSource=admin&replicaSet=rs0`,
             }),
             inject: [ConfigService],
         }),
