@@ -20,6 +20,10 @@ RUN npm install -g @nestjs/cli && \
     npm install --legacy-peer-deps
 
 # 1-4. 소스 코드 복사 및 빌드
+# NestJS 설정 파일 먼저 복사 (빌드에 필요)
+COPY nest-cli.json ./
+COPY tsconfig*.json ./
+# 나머지 소스 코드 복사
 COPY . .
 # 스키마 복사 (필요한 경우)
 RUN [ -d "schemas" ] && cp -r schemas ${APP_NAME}/src/ || true
@@ -33,15 +37,18 @@ RUN if [ -f ${APP_NAME}/instrumentation.ts ]; then \
     fi
 
 # 1-6. 빌드 실행 -> dist 폴더 생성
-# 빌드 전 현재 디렉토리와 파일 확인
-RUN echo "🔍 Current directory: $(pwd)" && \
-    echo "🔍 APP_NAME: ${APP_NAME}" && \
-    ls -la ${APP_NAME}/ 2>/dev/null | head -10 || echo "Directory ${APP_NAME} not found" && \
+# nest-cli.json과 tsconfig.json이 필요한 위치에 있는지 확인 후 빌드
+RUN if [ ! -f nest-cli.json ]; then \
+        echo "⚠️ nest-cli.json not found in root, checking ${APP_NAME}/..." && \
+        [ -f ${APP_NAME}/nest-cli.json ] && cp ${APP_NAME}/nest-cli.json . || echo "nest-cli.json not found"; \
+    fi && \
+    if [ ! -f tsconfig.json ]; then \
+        echo "⚠️ tsconfig.json not found in root, checking ${APP_NAME}/..." && \
+        [ -f ${APP_NAME}/tsconfig.json ] && cp ${APP_NAME}/tsconfig.json . || echo "tsconfig.json not found"; \
+    fi && \
     cd ${APP_NAME} && \
-    echo "🔍 In ${APP_NAME} directory:" && \
-    ls -la | head -10 && \
-    echo "🚀 Starting nest build..." && \
-    nest build --verbose 2>&1 || (echo "❌ Build failed!" && exit 1)
+    echo "🚀 Starting nest build in ${APP_NAME}..." && \
+    nest build || (echo "❌ Build failed! Check errors above." && exit 1)
 
 # 🔥 [다이어트 핵심] 빌드 완료 후, 실행에 필요 없는 '개발용 패키지' 제거
 # 이 명령어가 실행되면 node_modules 크기가 확 줄어듭니다.
