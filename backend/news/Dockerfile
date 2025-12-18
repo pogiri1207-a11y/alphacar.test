@@ -18,6 +18,11 @@ RUN npm install -g @nestjs/cli
 RUN npm install --legacy-peer-deps
 
 # 1-4. 소스 코드 복사 및 빌드
+# 서비스별 package.json이 있으면 복사 (없어도 빌드 계속)
+RUN if [ -f ${APP_NAME}/package.json ]; then \
+        mkdir -p ${APP_NAME} && \
+        cp ${APP_NAME}/package.json ${APP_NAME}/; \
+    fi || true
 COPY . .
 # 스키마 복사 (필요한 경우)
 RUN [ -d "schemas" ] && cp -r schemas ${APP_NAME}/src/ || true
