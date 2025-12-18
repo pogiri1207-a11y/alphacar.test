@@ -11,7 +11,8 @@ RUN apk add --no-cache libc6-compat
 
 # 1-2. 패키지 파일 복사
 COPY package.json package-lock.json ./
-COPY ${APP_NAME}/package.json ${APP_NAME}/ || true
+# 서비스별 package.json 복사 (소스 코드 복사 전에 처리)
+# 파일이 없어도 빌드가 계속되도록 소스 코드 복사 단계에서 처리
 
 # 1-3. 의존성 설치 (CI 모드: 빠르고 정확함)
 RUN npm install -g @nestjs/cli
@@ -19,6 +20,11 @@ RUN npm install --legacy-peer-deps
 
 # 1-4. 소스 코드 복사 및 빌드
 COPY . .
+# 서비스별 package.json이 있으면 복사 (없어도 빌드 계속)
+RUN if [ -f ${APP_NAME}/package.json ]; then \
+        mkdir -p ${APP_NAME} && \
+        cp ${APP_NAME}/package.json ${APP_NAME}/; \
+    fi || true
 # 스키마 복사 (필요한 경우)
 RUN [ -d "schemas" ] && cp -r schemas ${APP_NAME}/src/ || true
 
