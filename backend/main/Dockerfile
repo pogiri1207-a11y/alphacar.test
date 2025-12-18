@@ -33,7 +33,15 @@ RUN if [ -f ${APP_NAME}/instrumentation.ts ]; then \
     fi
 
 # 1-6. 빌드 실행 -> dist 폴더 생성
-RUN cd ${APP_NAME} && nest build
+# 빌드 전 현재 디렉토리와 파일 확인
+RUN echo "🔍 Current directory: $(pwd)" && \
+    echo "🔍 APP_NAME: ${APP_NAME}" && \
+    ls -la ${APP_NAME}/ 2>/dev/null | head -10 || echo "Directory ${APP_NAME} not found" && \
+    cd ${APP_NAME} && \
+    echo "🔍 In ${APP_NAME} directory:" && \
+    ls -la | head -10 && \
+    echo "🚀 Starting nest build..." && \
+    nest build --verbose 2>&1 || (echo "❌ Build failed!" && exit 1)
 
 # 🔥 [다이어트 핵심] 빌드 완료 후, 실행에 필요 없는 '개발용 패키지' 제거
 # 이 명령어가 실행되면 node_modules 크기가 확 줄어듭니다.
