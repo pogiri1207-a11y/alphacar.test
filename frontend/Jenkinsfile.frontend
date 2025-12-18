@@ -29,7 +29,7 @@ pipeline {
                 script {
                     def scannerHome = tool 'sonar-scanner'
                     withCredentials([string(credentialsId: "${SONAR_TOKEN_ID}", variable: 'S_TOKEN')]) {
-                        // 🚀 소나큐브 속도 개선 유지
+                        // 🚀 소나큐브 제외 옵션으로 속도 대폭 향상
                         sh """
                         ${scannerHome}/bin/sonar-scanner \
                         -Dsonar.projectKey=alphacar-frontend \
@@ -46,24 +46,26 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    // 도커 툴 경로 확보
-                    def dockerHome = tool 'docker'
+                    // 1. 도커 툴 설치 경로를 가져옵니다.
+                    def dockerHome = tool name: 'docker'
                     
-                    withEnv(["PATH+DOCKER=${dockerHome}/bin"]) {
-                        echo "🔨 이미지 빌드 시작: ${env.FULL_VERSION}"
+                    // 2. 도커 경로를 시스템 PATH 맨 앞에 강제로 끼워넣습니다. (핵심 해결책)
+                    withEnv(["PATH=${dockerHome}/bin:${env.PATH}"]) {
+                        echo "🔨 이미지 빌드 중: ${env.FULL_VERSION}"
                         
-                        // 1. 이미지 빌드
-                        sh "docker build -f frontend/Dockerfile -t ${HARBOR_URL}/${HARBOR_PROJECT}/${IMAGE_NAME}:${env.FULL_VERSION} frontend/"
+                        // 이미지 이름 설정
+                        def imageTag = "${HARBOR_URL}/${HARBOR_PROJECT}/${IMAGE_NAME}:${env.FULL_VERSION}"
                         
-                        // 2. 하버 푸시 (인증 방식 변경)
-                        // withDockerRegistry를 쓰면 docker login/logout을 직접 할 필요가 없습니다.
+                        // 빌드 실행
+                        sh "docker build -f frontend/Dockerfile -t ${imageTag} frontend/"
+                        
+                        // 하버 푸시 (PATH가 설정되어 있어 플러그인이 도커를 잘 찾습니다)
                         docker.withRegistry("http://${HARBOR_URL}", "${CREDENTIAL_ID}") {
-                            echo "🚀 하버로 이미지 푸시 중..."
-                            sh "docker push ${HARBOR_URL}/${HARBOR_PROJECT}/${IMAGE_NAME}:${env.FULL_VERSION}"
+                            sh "docker push ${imageTag}"
                         }
-
-                        // 3. 로컬 이미지 정리
-                        sh "docker rmi ${HARBOR_URL}/${HARBOR_PROJECT}/${IMAGE_NAME}:${env.FULL_VERSION}"
+                        
+                        // 로컬 이미지 정리
+                        sh "docker rmi ${imageTag}"
                     }
                 }
             }
@@ -71,7 +73,7 @@ pipeline {
     }
 
     post {
-        success { echo "✅ [성공] 모든 단계가 완료되었습니다!" }
-        failure { echo "❌ [실패] 로그를 확인하여 에러를 해결하세요." }
+        success { echo "✅ 모든 단계 성공!" }
+        failure { echo "❌ 빌드 실패! 로그를 확인하세요." }
     }
 }
