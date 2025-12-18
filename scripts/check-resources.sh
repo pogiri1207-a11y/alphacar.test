@@ -49,8 +49,8 @@ echo "⚠️  리소스 부족 경고:"
 echo "----------------------------------------"
 # 메모리 사용률이 80% 이상인 노드 확인
 for node in $(kubectl get nodes -o name | cut -d/ -f2); do
-    mem_usage=$(kubectl describe node $node 2>/dev/null | grep -A 5 "Allocated resources:" | grep memory | grep -oE '[0-9]+%' | sed 's/%//')
-    if [ ! -z "$mem_usage" ] && [ "$mem_usage" -gt 80 ]; then
+    mem_usage=$(kubectl describe node $node 2>/dev/null | grep -A 5 "Allocated resources:" | grep memory | grep -oE '[0-9]+%' | head -1 | sed 's/%//')
+    if [ ! -z "$mem_usage" ] && [ "$mem_usage" -gt 80 ] 2>/dev/null; then
         echo "🔴 $node: 메모리 사용률 ${mem_usage}% (위험!)"
     fi
 done
