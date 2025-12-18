@@ -37,17 +37,20 @@ RUN if [ -f ${APP_NAME}/instrumentation.ts ]; then \
     fi
 
 # 1-6. 빌드 실행 -> dist 폴더 생성
-# main 디렉토리로 이동하기 전에 node_modules 심볼릭 링크 생성
-# 또는 루트에서 빌드하되 프로젝트 경로 지정
+# main 디렉토리에 node_modules 심볼릭 링크 생성하여 상위 디렉토리의 node_modules 참조
 RUN echo "🔍 Verifying node_modules installation..." && \
     [ -d "node_modules/ioredis" ] || (echo "❌ ioredis not found in node_modules" && exit 1) && \
     [ -d "node_modules/class-validator" ] || (echo "❌ class-validator not found in node_modules" && exit 1) && \
     [ -d "node_modules/class-transformer" ] || (echo "❌ class-transformer not found in node_modules" && exit 1) && \
     echo "✅ All required packages found" && \
     cd ${APP_NAME} && \
+    # 상위 디렉토리의 node_modules를 참조할 수 있도록 심볼릭 링크 생성
+    if [ ! -d "node_modules" ]; then \
+        echo "🔗 Creating symlink to parent node_modules..." && \
+        ln -s ../node_modules node_modules; \
+    fi && \
     echo "🚀 Starting nest build in ${APP_NAME}..." && \
-    # 상위 디렉토리의 node_modules를 참조할 수 있도록 NODE_PATH 설정
-    NODE_PATH=/app/node_modules nest build || (echo "❌ Build failed! Check errors above." && exit 1)
+    nest build || (echo "❌ Build failed! Check errors above." && exit 1)
 
 # 🔥 [다이어트 핵심] 빌드 완료 후, 실행에 필요 없는 '개발용 패키지' 제거
 # 이 명령어가 실행되면 node_modules 크기가 확 줄어듭니다.
