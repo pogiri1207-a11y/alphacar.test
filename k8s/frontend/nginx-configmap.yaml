@@ -106,7 +106,6 @@ data:
             # Quote Backend (수정됨: rewrite 규칙 추가)
             location ~ ^/api/(vehicles|estimate|quote) {
                 proxy_pass http://quote_backend;
-                rewrite ^/api/(.*) /$1 break;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -229,7 +228,6 @@ data:
             # Quote Backend (수정됨: rewrite 규칙 추가)
             location ~ ^/api/(vehicles|estimate|quote) {
                 proxy_pass http://quote_backend;
-                rewrite ^/api/(.*) /$1 break;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
