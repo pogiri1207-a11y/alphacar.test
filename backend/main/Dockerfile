@@ -37,17 +37,18 @@ RUN if [ -f ${APP_NAME}/instrumentation.ts ]; then \
     fi
 
 # 1-6. 빌드 실행 -> dist 폴더 생성
-# nest-cli.json과 tsconfig.json이 필요한 위치에 있는지 확인 후 빌드
-RUN if [ ! -f nest-cli.json ]; then \
-        echo "⚠️ nest-cli.json not found in root, checking ${APP_NAME}/..." && \
-        [ -f ${APP_NAME}/nest-cli.json ] && cp ${APP_NAME}/nest-cli.json . || echo "nest-cli.json not found"; \
-    fi && \
-    if [ ! -f tsconfig.json ]; then \
-        echo "⚠️ tsconfig.json not found in root, checking ${APP_NAME}/..." && \
-        [ -f ${APP_NAME}/tsconfig.json ] && cp ${APP_NAME}/tsconfig.json . || echo "tsconfig.json not found"; \
-    fi && \
+# node_modules가 제대로 설치되었는지 확인 후 빌드
+RUN echo "🔍 Checking node_modules..." && \
+    ls -la node_modules | head -5 && \
+    echo "🔍 Checking if required packages exist..." && \
+    [ -d "node_modules/ioredis" ] && echo "✅ ioredis found" || echo "❌ ioredis not found" && \
+    [ -d "node_modules/class-validator" ] && echo "✅ class-validator found" || echo "❌ class-validator not found" && \
+    [ -d "node_modules/class-transformer" ] && echo "✅ class-transformer found" || echo "❌ class-transformer not found" && \
     cd ${APP_NAME} && \
     echo "🚀 Starting nest build in ${APP_NAME}..." && \
+    echo "🔍 Current directory: $(pwd)" && \
+    echo "🔍 Checking node_modules from ${APP_NAME}:" && \
+    ls -la ../node_modules | head -5 && \
     nest build || (echo "❌ Build failed! Check errors above." && exit 1)
 
 # 🔥 [다이어트 핵심] 빌드 완료 후, 실행에 필요 없는 '개발용 패키지' 제거
