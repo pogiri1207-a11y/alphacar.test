@@ -171,20 +171,11 @@ pipeline {
                                     export DOCKER_BUILDKIT=1
                                     docker pull ${imageBase}:latest || true
                                     
-                                    # BuildKit을 사용한 빠른 빌드 (캐시 마운트 활용)
-                                    docker buildx build \\
-                                        --build-arg APP_NAME=${service} \\
-                                        --cache-from type=registry,ref=${imageBase}:latest \\
-                                        --cache-to type=inline \\
-                                        --load \\
-                                        -f backend/${service}/Dockerfile \\
-                                        -t ${imageBase}:${env.FULL_VERSION} \\
-                                        -t ${imageBase}:latest \\
-                                        backend/ || \\
-                                    # buildx 실패 시 일반 빌드로 fallback
+                                    # BuildKit을 사용한 빠른 빌드 (일반 docker build 사용 - 더 안정적)
                                     docker build \\
                                         --build-arg APP_NAME=${service} \\
                                         --cache-from ${imageBase}:latest \\
+                                        --progress=plain \\
                                         -f backend/${service}/Dockerfile \\
                                         -t ${imageBase}:${env.FULL_VERSION} \\
                                         -t ${imageBase}:latest \\

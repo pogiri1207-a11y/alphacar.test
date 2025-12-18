@@ -150,18 +150,10 @@ pipeline {
                         export DOCKER_BUILDKIT=1
                         docker pull ${imageTagLatestNoHttp} || true
                         
-                        # BuildKit을 사용한 빠른 빌드
-                        docker buildx build \\
-                            --cache-from type=registry,ref=${imageTagLatestNoHttp} \\
-                            --cache-to type=inline \\
-                            --load \\
-                            -f frontend/Dockerfile \\
-                            -t ${imageTagNoHttp} \\
-                            -t ${imageTagLatestNoHttp} \\
-                            frontend/ || \\
-                        # buildx 실패 시 일반 빌드로 fallback
+                        # BuildKit을 사용한 빠른 빌드 (일반 docker build 사용 - 더 안정적)
                         docker build \\
                             --cache-from ${imageTagLatestNoHttp} \\
+                            --progress=plain \\
                             -f frontend/Dockerfile \\
                             -t ${imageTagNoHttp} \\
                             -t ${imageTagLatestNoHttp} \\
