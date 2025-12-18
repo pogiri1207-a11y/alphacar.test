@@ -11,7 +11,6 @@ RUN apk add --no-cache libc6-compat
 
 # 1-2. 패키지 파일 복사
 COPY package.json package-lock.json ./
-COPY ${APP_NAME}/package.json ${APP_NAME}/ || true
 
 # 1-3. 의존성 설치 (CI 모드: 빠르고 정확함)
 RUN npm install -g @nestjs/cli
