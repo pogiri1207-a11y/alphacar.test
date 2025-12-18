@@ -166,21 +166,33 @@ pipeline {
                             buildSteps["Build-${service}"] = {
                                 echo "📦 Building [${service}]..."
                                 def imageBase = "192.168.56.200:30002/${HARBOR_PROJECT}/${service}"
-                                sh """
-                                    # BuildKit 활성화 및 캐시 이미지 pull
-                                    export DOCKER_BUILDKIT=1
-                                    docker pull ${imageBase}:latest || true
-                                    
-                                    # BuildKit을 사용한 빠른 빌드 (일반 docker build 사용 - 더 안정적)
-                                    docker build \\
-                                        --build-arg APP_NAME=${service} \\
-                                        --cache-from ${imageBase}:latest \\
-                                        --progress=plain \\
-                                        -f backend/${service}/Dockerfile \\
-                                        -t ${imageBase}:${env.FULL_VERSION} \\
-                                        -t ${imageBase}:latest \\
-                                        backend/
-                                """
+                                timeout(time: 30, unit: 'MINUTES') {
+                                    sh """
+                                        # BuildKit 활성화 및 캐시 이미지 pull
+                                        export DOCKER_BUILDKIT=1
+                                        docker pull ${imageBase}:latest || true
+                                        
+                                        # BuildKit을 사용한 빠른 빌드 (타임아웃 및 진행 상황 표시)
+                                        docker build \\
+                                            --build-arg APP_NAME=${service} \\
+                                            --cache-from ${imageBase}:latest \\
+                                            --progress=plain \\
+                                            --no-cache=false \\
+                                            -f backend/${service}/Dockerfile \\
+                                            -t ${imageBase}:${env.FULL_VERSION} \\
+                                            -t ${imageBase}:latest \\
+                                            backend/ || {
+                                            echo "⚠️ Build failed, retrying without cache..."
+                                            docker build \\
+                                                --build-arg APP_NAME=${service} \\
+                                                --no-cache=false \\
+                                                -f backend/${service}/Dockerfile \\
+                                                -t ${imageBase}:${env.FULL_VERSION} \\
+                                                -t ${imageBase}:latest \\
+                                                backend/
+                                        }
+                                    """
+                                }
                             }
                         }
                         
@@ -188,14 +200,28 @@ pipeline {
                         parallel buildSteps
                         echo "✅ All images built successfully"
                         
-                        // 병렬 푸시
+                        // 병렬 푸시 (타임아웃 설정)
                         def pushSteps = [:]
                         serviceList.each { service ->
                             pushSteps["Push-${service}"] = {
-                                echo "📤 Pushing [${service}]..."
-                                sh "docker push 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:${env.FULL_VERSION}"
-                                sh "docker push 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:latest"
-                                sh "docker rmi 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:${env.FULL_VERSION} || true"
+                                timeout(time: 10, unit: 'MINUTES') {
+                                    echo "📤 Pushing [${service}]..."
+                                    retry(3) {
+                                        sh """
+                                            docker push 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:${env.FULL_VERSION} || {
+                                                echo "⚠️ Push failed, retrying..."
+                                                sleep 2
+                                                docker push 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:${env.FULL_VERSION}
+                                            }
+                                            docker push 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:latest || {
+                                                echo "⚠️ Push latest failed, retrying..."
+                                                sleep 2
+                                                docker push 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:latest
+                                            }
+                                            docker rmi 192.168.56.200:30002/${HARBOR_PROJECT}/${service}:${env.FULL_VERSION} || true
+                                        """
+                                    }
+                                }
                             }
                         }
                         
