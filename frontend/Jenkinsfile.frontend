@@ -52,11 +52,10 @@ pipeline {
                     if (sonarAvailable) {
                         def scannerHome = tool 'sonar-scanner'
                         
-                        // SonarQube 인증 토큰 사용 (Node.js 오류 무시)
-                        def sonarSuccess = false
+                        // SonarQube 인증 토큰 사용 (Node.js 오류 무시, ANALYSIS SUCCESSFUL 확인)
                         try {
                             withSonarQubeEnv("${SONARQUBE}") {
-                                def result = sh(
+                                def output = sh(
                                     script: """
                                         ${scannerHome}/bin/sonar-scanner \\
                                             -Dsonar.projectKey=alphacar-frontend \\
@@ -67,30 +66,13 @@ pipeline {
                                             -Dsonar.exclusions=**/node_modules/**,**/.next/**,**/dist/**,**/out/**,**/*.html \\
                                             -Dsonar.scanner.timeout=300 2>&1
                                     """,
-                                    returnStatus: true
-                                )
-                                // ANALYSIS SUCCESSFUL이 포함되어 있으면 성공으로 간주
-                                def output = sh(
-                                    script: """
-                                        ${scannerHome}/bin/sonar-scanner \\
-                                            -Dsonar.projectKey=alphacar-frontend \\
-                                            -Dsonar.projectName=alphacar-frontend \\
-                                            -Dsonar.sources=frontend \\
-                                            -Dsonar.host.url=${SONAR_HOST_URL} \\
-                                            -Dsonar.sourceEncoding=UTF-8 \\
-                                            -Dsonar.exclusions=**/node_modules/**,**/.next/**,**/dist/**,**/out/**,**/*.html \\
-                                            -Dsonar.scanner.timeout=300 2>&1 | grep -i "ANALYSIS SUCCESSFUL" || echo ""
-                                    """,
                                     returnStdout: true
-                                ).trim()
+                                )
                                 if (output.contains("ANALYSIS SUCCESSFUL")) {
-                                    sonarSuccess = true
+                                    echo "✅ SonarQube 분석 완료 (Node.js 경고는 무시됨)"
+                                } else {
+                                    echo "⚠️ SonarQube 분석 완료 (일부 경고 발생, 계속 진행)"
                                 }
-                            }
-                            if (sonarSuccess) {
-                                echo "✅ SonarQube 분석 완료 (Node.js 경고는 무시됨)"
-                            } else {
-                                echo "⚠️ SonarQube 분석 완료 (일부 경고 발생)"
                             }
                         } catch (Exception e) {
                             // withSonarQubeEnv 실패 시 토큰 직접 사용 시도
@@ -107,14 +89,14 @@ pipeline {
                                                 -Dsonar.token=\${SONAR_TOKEN} \\
                                                 -Dsonar.sourceEncoding=UTF-8 \\
                                                 -Dsonar.exclusions=**/node_modules/**,**/.next/**,**/dist/**,**/out/**,**/*.html \\
-                                                -Dsonar.scanner.timeout=300 2>&1 | grep -i "ANALYSIS SUCCESSFUL" || echo ""
+                                                -Dsonar.scanner.timeout=300 2>&1
                                         """,
                                         returnStdout: true
-                                    ).trim()
+                                    )
                                     if (output.contains("ANALYSIS SUCCESSFUL")) {
                                         echo "✅ SonarQube 분석 완료 (토큰 사용, Node.js 경고는 무시됨)"
                                     } else {
-                                        echo "⚠️ SonarQube 분석 완료 (일부 경고 발생)"
+                                        echo "⚠️ SonarQube 분석 완료 (일부 경고 발생, 계속 진행)"
                                     }
                                 }
                             } catch (Exception e2) {
