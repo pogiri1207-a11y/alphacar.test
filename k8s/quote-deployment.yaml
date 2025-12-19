@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alphacar-quote
+  labels:
+    app: quote
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quote
+  template:
+    metadata:
+      labels:
+        app: quote
+    spec:
+      containers:
+      - name: quote
+        # 🚀 중요: 처음엔 latest나 특정 버전을 적어둡니다. (젠킨스가 이 부분을 자동으로 고칠 겁니다)
+        image: 192.168.56.200:30002/alphacar/quote:latest
+        ports:
+        - containerPort: 3000
+        imagePullPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alphacar-quote-svc
+spec:
+  selector:
+    app: quote
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: NodePort
