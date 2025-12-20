@@ -27,7 +27,7 @@ spec:
         - name: SERVICE_NAME
           value: "mypage-backend"
         - name: BASE_URL
-          value: "https://192.168.56.200:31008"
+          value: "https://fibrillose-madlyn-slaughteringly.ngrok-free.dev"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           valueFrom:
             configMapKeyRef:
